@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Agent {
+  id          String   @id @default(uuid())
+  name        String   @unique @db.VarChar(64)
+  eloRating   Int      @default(1200) @map("elo_rating")
+  wins        Int      @default(0)
+  losses      Int      @default(0)
+  category    String   @db.VarChar(32)
+  shieldConfig Json?   @map("shield_config")
+  scriptPath  String?  @map("script_path")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  matchesAsA  Match[]  @relation("AgentA")
+  matchesAsB  Match[]  @relation("AgentB")
+  wonMatches  Match[]  @relation("Winner")
+
+  @@map("agents")
+}
+
+model Match {
+  id          String   @id @default(uuid())
+  agentAId    String   @map("agent_a_id")
+  agentBId    String   @map("agent_b_id")
+  winnerId    String?  @map("winner_id")
+  moltFilePath String? @map("molt_file_path")
+  scores      Json?
+  status      MatchStatus @default(PENDING)
+  startedAt   DateTime? @map("started_at")
+  endedAt     DateTime? @map("ended_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  agentA      Agent    @relation("AgentA", fields: [agentAId], references: [id])
+  agentB      Agent    @relation("AgentB", fields: [agentBId], references: [id])
+  winner      Agent?   @relation("Winner", fields: [winnerId], references: [id])
+
+  @@map("matches")
+}
+
+enum MatchStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}

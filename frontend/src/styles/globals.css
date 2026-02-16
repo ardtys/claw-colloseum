@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@layer base {
+  * {
+    border-radius: 0 !important;
+  }
+
+  body {
+    @apply bg-claw-black text-claw-text font-mono;
+    -webkit-font-smoothing: none;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    @apply bg-claw-green text-claw-black;
+  }
+}
+
+@layer components {
+  .brutal-border {
+    @apply border-2 border-claw-border;
+  }
+
+  .brutal-box {
+    @apply brutal-border bg-claw-dark p-4;
+  }
+
+  .brutal-heading {
+    @apply uppercase tracking-brutal font-bold text-claw-green;
+  }
+
+  .brutal-button {
+    @apply brutal-border bg-claw-black px-4 py-2 uppercase tracking-brutal font-bold;
+    @apply hover:bg-claw-green hover:text-claw-black transition-colors duration-100;
+  }
+
+  .brutal-button-danger {
+    @apply brutal-button hover:bg-claw-orange;
+  }
+
+  .terminal-text {
+    @apply font-mono text-sm text-claw-green leading-tight;
+  }
+
+  .data-label {
+    @apply text-xs uppercase tracking-brutal text-claw-text-dim;
+  }
+
+  .data-value {
+    @apply text-lg font-bold text-claw-text;
+  }
+
+  .glitch-active {
+    animation: glitch 0.1s ease-in-out infinite;
+  }
+
+  .scanline {
+    @apply absolute inset-0 pointer-events-none overflow-hidden opacity-10;
+  }
+
+  .scanline::before {
+    content: '';
+    @apply absolute inset-0;
+    background: linear-gradient(to bottom, transparent, #FF6B35, transparent);
+    animation: scan 3s linear infinite;
+  }
+}
+
+@layer utilities {
+  .text-glow-green {
+    text-shadow: 0 0 10px #FF6B35, 0 0 20px #FF6B35, 0 0 40px #FF6B35;
+  }
+
+  .text-glow-orange {
+    text-shadow: 0 0 10px #FF4500, 0 0 20px #FF4500;
+  }
+
+  .text-glow-coral {
+    text-shadow: 0 0 10px #FF7F50, 0 0 20px #FF7F50, 0 0 40px #FF7F50;
+  }
+
+  .border-glow-green {
+    box-shadow: 0 0 10px #FF6B35, inset 0 0 5px #FF6B35;
+  }
+
+  .border-glow-coral {
+    box-shadow: 0 0 10px #FF7F50, inset 0 0 5px #FF7F50;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* ASCII Art styling */
+.ascii-art {
+  white-space: pre;
+  font-size: 10px;
+  line-height: 1;
+  color: #FF6B35;
+}
+
+/* Terminal cursor */
+.terminal-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 16px;
+  background-color: #FF6B35;
+  animation: blink 1s step-end infinite;
+}
+
+/* Health bar segments */
+.health-segment {
+  @apply w-2 h-full transition-all duration-100;
+}
+
+.health-segment.full {
+  background-color: #FF6B35;
+}
+
+.health-segment.damaged {
+  background-color: #F4A460;
+}
+
+.health-segment.critical {
+  background-color: #DC2626;
+  @apply animate-pulse-fast;
+}
+
+.health-segment.empty {
+  background-color: #2d1f1a;
+}
