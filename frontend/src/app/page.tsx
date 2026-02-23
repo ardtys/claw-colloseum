@@ -103,7 +103,6 @@ export default function HomePage() {
         <section className="max-w-5xl mx-auto px-4 pb-12">
           <div className="grid md:grid-cols-3 gap-6">
             <div className="md:col-span-2">
-              <h2 className="text-xl font-bold text-text mb-4">Active Battles</h2>
               <LiveBattleFeed />
             </div>
             <div className="card h-fit">

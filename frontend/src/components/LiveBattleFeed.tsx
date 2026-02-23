@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import Link from 'next/link'
 
 interface LiveBattle {
   id: string
@@ -18,16 +19,27 @@ const mockBattles: LiveBattle[] = [
 ]
 
 export function LiveBattleFeed() {
-  const [battles, setBattles] = useState<LiveBattle[]>(mockBattles)
+  const [battles] = useState<LiveBattle[]>(mockBattles)
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'starting': return 'bg-blue-500'
       case 'siege': return 'bg-accent'
       case 'defense': return 'bg-accent-light'
-      case 'counter': return 'bg-accent-dim'
+      case 'counter': return 'bg-yellow-500'
       case 'finished': return 'bg-text-muted'
       default: return 'bg-text-muted'
+    }
+  }
+
+  const getStatusTextColor = (status: string) => {
+    switch (status) {
+      case 'starting': return 'text-blue-500'
+      case 'siege': return 'text-accent'
+      case 'defense': return 'text-accent-light'
+      case 'counter': return 'text-yellow-500'
+      case 'finished': return 'text-text-muted'
+      default: return 'text-text-muted'
     }
   }
 
@@ -42,41 +54,67 @@ export function LiveBattleFeed() {
     }
   }
 
+  const activeBattles = battles.filter(b => b.status !== 'finished').length
+
   return (
     <div className="bg-bg-secondary border border-border rounded-xl overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-bg-tertiary/50">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-          <h3 className="font-semibold text-text text-sm">Live Battles</h3>
+          <h3 className="font-semibold text-text">Live Battles</h3>
         </div>
-        <span className="text-xs text-text-muted">{battles.length} active</span>
+        <span className="text-xs text-text-muted px-2 py-1 bg-bg-tertiary rounded-full">
+          {activeBattles} active
+        </span>
       </div>
 
-      <div className="divide-y divide-border max-h-80 overflow-y-auto">
+      {/* Battle List */}
+      <div className="divide-y divide-border">
         {battles.map((battle) => (
-          <div key={battle.id} className="px-4 py-3 hover:bg-bg-tertiary transition-colors">
-            <div className="flex items-center justify-between mb-2">
+          <Link
+            key={battle.id}
+            href={`/matches/${battle.id}`}
+            className="block px-4 py-4 hover:bg-bg-tertiary/50 transition-colors"
+          >
+            {/* Status Row */}
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${getStatusColor(battle.status)} ${battle.status !== 'finished' ? 'animate-pulse' : ''}`} />
-                <span className="text-xs font-medium text-text-muted uppercase">
+                <span className={`text-xs font-semibold uppercase tracking-wide ${getStatusTextColor(battle.status)}`}>
                   {getStatusLabel(battle.status)}
                 </span>
               </div>
               <span className="text-xs text-text-muted">{battle.timeAgo}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-accent">{battle.agentA}</span>
-              <span className="text-xs text-text-muted px-2">vs</span>
-              <span className="text-sm font-medium text-accent-light">{battle.agentB}</span>
+
+            {/* Battle Matchup */}
+            <div className="flex items-center justify-between bg-bg-tertiary/30 rounded-lg p-3">
+              <div className="flex-1 text-left">
+                <span className="text-sm font-semibold text-accent">{battle.agentA}</span>
+              </div>
+              <div className="px-4">
+                <span className="text-xs font-bold text-text-muted bg-bg px-2 py-1 rounded">VS</span>
+              </div>
+              <div className="flex-1 text-right">
+                <span className="text-sm font-semibold text-accent-light">{battle.agentB}</span>
+              </div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 
-      <div className="px-4 py-3 border-t border-border">
-        <a href="/matches" className="text-xs text-accent hover:underline">
-          View all matches →
-        </a>
+      {/* Footer */}
+      <div className="px-4 py-3 border-t border-border bg-bg-tertiary/30">
+        <Link
+          href="/matches"
+          className="flex items-center justify-center gap-2 text-sm text-accent hover:text-accent-light transition-colors"
+        >
+          <span>View all matches</span>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
       </div>
     </div>
   )
