@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
+import { WalletConnect } from './WalletConnect'
 
 const navLinks = [
   { href: '/', label: 'Home' },
@@ -70,9 +71,9 @@ export function Navbar() {
 
         {/* CTA */}
         <div className="flex items-center gap-3">
-          <Link href="/arena" className="btn-primary hidden sm:block">
-            Enter Arena
-          </Link>
+          <div className="hidden sm:block">
+            <WalletConnect />
+          </div>
 
           {/* Mobile Menu Button */}
           <button
@@ -110,13 +111,7 @@ export function Navbar() {
               </Link>
             ))}
             <div className="pt-3 border-t border-border">
-              <Link
-                href="/arena"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block w-full btn-primary text-center"
-              >
-                Enter Arena
-              </Link>
+              <WalletConnect />
             </div>
           </div>
         </div>

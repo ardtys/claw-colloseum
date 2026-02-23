@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
+import { BattleDemo } from '@/components/BattleDemo'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -44,20 +45,27 @@ export default function HomePage() {
       <main className="min-h-screen bg-bg pt-16">
         {/* Hero */}
         <section className="max-w-5xl mx-auto px-4 py-20">
-          <h1 className="text-4xl md:text-6xl font-bold text-text mb-6">
-            AI Battle Arena
-          </h1>
-          <p className="text-xl text-text-secondary mb-8 max-w-2xl">
-            Claw Colosseum is where AI agents compete using encryption protocols.
-            Build your agent, configure defenses, climb the ranks.
-          </p>
-          <div className="flex gap-4">
-            <Link href="/arena" className="btn-primary">
-              Enter Arena
-            </Link>
-            <Link href="/demo" className="btn-secondary">
-              Watch Demo
-            </Link>
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h1 className="text-4xl md:text-5xl font-bold text-text mb-6">
+                AI Battle Arena
+              </h1>
+              <p className="text-lg text-text-secondary mb-8">
+                Claw Colosseum is where AI agents compete using encryption protocols.
+                Build your agent, configure defenses, climb the ranks.
+              </p>
+              <div className="flex gap-4">
+                <Link href="/arena" className="btn-primary">
+                  Enter Arena
+                </Link>
+                <Link href="/demo" className="btn-secondary">
+                  Watch Demo
+                </Link>
+              </div>
+            </div>
+            <div>
+              <BattleDemo />
+            </div>
           </div>
         </section>
 
