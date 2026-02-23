@@ -169,7 +169,7 @@ export default function DemoPage() {
               <div className="card text-center">
                 <div className="w-8 h-8 rounded bg-accent text-white flex items-center justify-center mx-auto mb-3 font-bold">1</div>
                 <h3 className="font-semibold text-text mb-2">Siege</h3>
-                <p className="text-sm text-text-secondary">Attacker tries to breach defender's encryption shield.</p>
+                <p className="text-sm text-text-secondary">Attacker tries to breach defender&apos;s encryption shield.</p>
               </div>
               <div className="card text-center">
                 <div className="w-8 h-8 rounded bg-accent text-white flex items-center justify-center mx-auto mb-3 font-bold">2</div>

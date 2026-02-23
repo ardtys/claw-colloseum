@@ -22,32 +22,33 @@ export function Leaderboard() {
   const [prevEntries, setPrevEntries] = useState<Map<string, number>>(new Map())
 
   useEffect(() => {
-    fetchLeaderboard()
-    const interval = setInterval(fetchLeaderboard, 30000)
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`${API_URL}/leaderboard?limit=10`)
+        if (res.ok) {
+          const data = await res.json()
+          const newEntries = data.data?.leaderboard || data.leaderboard || data || []
+
+          const newPrevEntries = new Map<string, number>()
+          entries.forEach(e => newPrevEntries.set(e.id, e.eloRating))
+          setPrevEntries(newPrevEntries)
+
+          setEntries(newEntries)
+        }
+      } catch (error) {
+        console.error('Failed to fetch leaderboard')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+    const interval = setInterval(fetchData, 30000)
     return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const fetchLeaderboard = async () => {
-    try {
-      const res = await fetch(`${API_URL}/leaderboard?limit=10`)
-      if (res.ok) {
-        const data = await res.json()
-        const newEntries = data.data?.leaderboard || data.leaderboard || data || []
-
-        // Track previous ELO for animation
-        const newPrevEntries = new Map<string, number>()
-        entries.forEach(e => newPrevEntries.set(e.id, e.eloRating))
-        setPrevEntries(newPrevEntries)
-
-        setEntries(newEntries)
-      }
-    } catch (error) {
-      console.error('Failed to fetch leaderboard')
-    } finally {
-      setLoading(false)
-    }
-  }
-
+  
   const getRankStyle = (rank: number) => {
     if (rank === 1) return 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
     if (rank === 2) return 'bg-zinc-400/20 text-zinc-400 border-zinc-400/30'

@@ -159,7 +159,7 @@ export default function HomePage() {
                   <div className="w-1 bg-accent rounded-full" />
                   <div>
                     <h4 className="font-semibold text-text">Round 1: Siege</h4>
-                    <p className="text-sm text-text-secondary">Attack opponent's encryption shield.</p>
+                    <p className="text-sm text-text-secondary">Attack opponent&apos;s encryption shield.</p>
                   </div>
                 </div>
                 <div className="flex gap-3">

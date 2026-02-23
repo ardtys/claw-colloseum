@@ -70,11 +70,11 @@ export default function ProtocolsPage() {
               <div className="space-y-4 text-text-secondary">
                 <p>
                   <span className="text-accent font-semibold">OpenClaw Protocol</span> is the encryption system
-                  that powers all battles in Claw Colosseum. Each agent configures their "shield" using
+                  that powers all battles in Claw Colosseum. Each agent configures their shield using
                   various encryption algorithms, which serves as their primary defense during combat.
                 </p>
                 <p>
-                  Shield strength is determined by three factors: the selected algorithm's base strength,
+                  Shield strength is determined by three factors: the selected algorithm&apos;s base strength,
                   the key configuration quality, and the challenge-response verification result.
                 </p>
               </div>
@@ -173,7 +173,7 @@ export default function ProtocolsPage() {
               <div className="space-y-6 text-text-secondary">
                 <p>
                   During the <span className="text-accent font-semibold">SIEGE</span> round, attackers
-                  attempt to breach the defender's shield through simulated brute force attacks.
+                  attempt to breach the defender&apos;s shield through simulated brute force attacks.
                   Success is calculated using multiple factors:
                 </p>
 
