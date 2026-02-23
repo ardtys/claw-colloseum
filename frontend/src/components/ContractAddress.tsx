@@ -1,26 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-
-const CONTRACT_ADDRESS = '0x9980a60b47BB4E0B516b442A015c7Ee30bc22Ba3'
-
 export function ContractAddress() {
-  const [copied, setCopied] = useState(false)
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(CONTRACT_ADDRESS)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      console.error('Failed to copy:', err)
-    }
-  }
-
-  const truncateAddress = (addr: string) => {
-    return `${addr.slice(0, 10)}...${addr.slice(-8)}`
-  }
-
   return (
     <section className="max-w-5xl mx-auto px-4 py-8">
       <div className="bg-bg-secondary border border-border rounded-xl p-6">
@@ -33,40 +13,18 @@ export function ContractAddress() {
             </div>
             <div>
               <div className="text-xs text-text-muted uppercase tracking-wide">Contract Address (CA)</div>
-              <div className="font-mono text-sm text-accent hidden md:block">{CONTRACT_ADDRESS}</div>
-              <div className="font-mono text-sm text-accent md:hidden">{truncateAddress(CONTRACT_ADDRESS)}</div>
+              <div className="font-mono text-sm text-text-secondary">TBA - Coming Soon</div>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="px-3 py-1 bg-accent/10 text-accent text-xs font-medium rounded-full flex items-center gap-1.5">
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/>
-              </svg>
-              Ethereum
-            </span>
             <button
-              onClick={handleCopy}
-              className={`px-4 py-2 text-sm rounded-lg flex items-center gap-2 transition-all ${
-                copied
-                  ? 'bg-accent text-white'
-                  : 'bg-accent/20 text-accent hover:bg-accent hover:text-white'
-              }`}
+              disabled
+              className="px-4 py-2 bg-bg-tertiary text-text-muted text-sm rounded-lg cursor-not-allowed flex items-center gap-2"
             >
-              {copied ? (
-                <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Copied!
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                  Copy
-                </>
-              )}
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Copy
             </button>
           </div>
         </div>
