@@ -1,155 +1,209 @@
-import { Express, Request, Response } from 'express';
+import { Express, Request, Response, NextFunction } from 'express';
+import { ZodError } from 'zod';
 import { prisma } from '../index.js';
-import { OpenClaw, EncryptionProtocol } from '../claw-protocols/shield.js';
+import { OpenClaw } from '../claw-protocols/shield.js';
 import { MoltbookLogger } from '../molt-adapter/logger.js';
 import { readFile } from 'fs/promises';
-import { join } from 'path';
+import logger from '../utils/logger.js';
+import {
+  RegisterAgentSchema,
+  ShieldConfigSchema,
+  MatchQuerySchema,
+  LeaderboardQuerySchema,
+  UUIDSchema,
+} from '../utils/validation.js';
+import { AppError, NotFoundError, ConflictError, ValidationError } from '../utils/errors.js';
+
+// Response wrapper for consistency
+interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: { code: string; message: string; details?: unknown };
+  meta?: { timestamp: number };
+}
+
+function sendSuccess<T>(res: Response, data: T, status: number = 200): void {
+  const response: ApiResponse<T> = {
+    success: true,
+    data,
+    meta: { timestamp: Date.now() },
+  };
+  res.status(status).json(response);
+}
+
+function sendError(res: Response, error: AppError | Error): void {
+  const statusCode = error instanceof AppError ? error.statusCode : 500;
+  const code = error instanceof AppError ? error.code : 'INTERNAL_ERROR';
+
+  const response: ApiResponse = {
+    success: false,
+    error: {
+      code,
+      message: error.message,
+    },
+    meta: { timestamp: Date.now() },
+  };
+
+  res.status(statusCode).json(response);
+}
+
+// Async handler wrapper
+const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => Promise<void>) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+};
 
 export function setupRoutes(app: Express): void {
   // Health check
   app.get('/health', (req: Request, res: Response) => {
-    res.json({ status: 'ok', timestamp: Date.now() });
+    sendSuccess(res, { status: 'healthy', uptime: process.uptime() });
   });
 
   // ================= AGENT ROUTES =================
 
   // Register new agent
-  app.post('/agents/register', async (req: Request, res: Response) => {
-    try {
-      const { name, category } = req.body;
+  app.post(
+    '/agents/register',
+    asyncHandler(async (req: Request, res: Response) => {
+      const validated = RegisterAgentSchema.parse(req.body);
 
-      if (!name || !category) {
-        res.status(400).json({ error: 'Name and category are required' });
-        return;
-      }
+      const existing = await prisma.agent.findUnique({
+        where: { name: validated.name },
+      });
 
-      const existing = await prisma.agent.findUnique({ where: { name } });
       if (existing) {
-        res.status(409).json({ error: 'Agent name already taken' });
-        return;
+        throw new ConflictError('Agent name already taken');
       }
 
       const agent = await prisma.agent.create({
         data: {
-          name,
-          category,
-          eloRating: 1200
-        }
+          name: validated.name,
+          category: validated.category,
+          eloRating: 1200,
+        },
       });
 
-      res.status(201).json({
-        id: agent.id,
-        name: agent.name,
-        category: agent.category,
-        eloRating: agent.eloRating,
-        message: 'Agent registered successfully'
-      });
-    } catch (error) {
-      console.error('[API] Register error:', error);
-      res.status(500).json({ error: 'Failed to register agent' });
-    }
-  });
+      logger.info('Agent registered', { agentId: agent.id, name: agent.name });
+
+      sendSuccess(
+        res,
+        {
+          id: agent.id,
+          name: agent.name,
+          category: agent.category,
+          eloRating: agent.eloRating,
+        },
+        201
+      );
+    })
+  );
 
   // Get agent by ID
-  app.get('/agents/:id', async (req: Request, res: Response) => {
-    try {
+  app.get(
+    '/agents/:id',
+    asyncHandler(async (req: Request, res: Response) => {
+      const id = UUIDSchema.parse(req.params.id);
+
       const agent = await prisma.agent.findUnique({
-        where: { id: req.params.id },
+        where: { id },
         include: {
-          matchesAsA: { take: 5, orderBy: { createdAt: 'desc' } },
-          matchesAsB: { take: 5, orderBy: { createdAt: 'desc' } }
-        }
+          matchesAsA: {
+            take: 5,
+            orderBy: { createdAt: 'desc' },
+            select: { id: true, status: true, startedAt: true, winnerId: true },
+          },
+          matchesAsB: {
+            take: 5,
+            orderBy: { createdAt: 'desc' },
+            select: { id: true, status: true, startedAt: true, winnerId: true },
+          },
+        },
       });
 
       if (!agent) {
-        res.status(404).json({ error: 'Agent not found' });
-        return;
+        throw new NotFoundError('Agent');
       }
 
       const recentMatches = [...agent.matchesAsA, ...agent.matchesAsB]
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .sort((a, b) => (b.startedAt?.getTime() || 0) - (a.startedAt?.getTime() || 0))
         .slice(0, 5);
 
-      res.json({
+      const totalGames = agent.wins + agent.losses;
+
+      sendSuccess(res, {
         id: agent.id,
         name: agent.name,
         category: agent.category,
         eloRating: agent.eloRating,
         wins: agent.wins,
         losses: agent.losses,
-        winRate: agent.wins + agent.losses > 0
-          ? Math.round((agent.wins / (agent.wins + agent.losses)) * 100)
-          : 0,
+        winRate: totalGames > 0 ? Math.round((agent.wins / totalGames) * 100) : 0,
+        totalGames,
         hasShield: !!agent.shieldConfig,
-        recentMatches: recentMatches.map(m => ({
+        recentMatches: recentMatches.map((m) => ({
           id: m.id,
           status: m.status,
-          startedAt: m.startedAt
-        }))
+          startedAt: m.startedAt,
+          won: m.winnerId === agent.id,
+        })),
       });
-    } catch (error) {
-      console.error('[API] Get agent error:', error);
-      res.status(500).json({ error: 'Failed to fetch agent' });
-    }
-  });
+    })
+  );
 
   // Submit encryption shield
-  app.post('/agents/:id/shield', async (req: Request, res: Response) => {
-    try {
-      const { protocol } = req.body as { protocol: EncryptionProtocol };
+  app.post(
+    '/agents/:id/shield',
+    asyncHandler(async (req: Request, res: Response) => {
+      const id = UUIDSchema.parse(req.params.id);
+      const { protocol } = ShieldConfigSchema.parse(req.body);
 
-      if (!['AES-256', 'RSA-2048', 'CHACHA20'].includes(protocol)) {
-        res.status(400).json({ error: 'Invalid protocol. Use AES-256, RSA-2048, or CHACHA20' });
-        return;
-      }
-
-      const agent = await prisma.agent.findUnique({ where: { id: req.params.id } });
+      const agent = await prisma.agent.findUnique({ where: { id } });
       if (!agent) {
-        res.status(404).json({ error: 'Agent not found' });
-        return;
+        throw new NotFoundError('Agent');
       }
 
       const shield = OpenClaw.createShield(protocol);
       const validation = OpenClaw.validateShield(shield);
 
       await prisma.agent.update({
-        where: { id: req.params.id },
-        data: { shieldConfig: shield as object }
+        where: { id },
+        data: { shieldConfig: shield as object },
       });
 
-      res.json({
-        message: 'Shield configured successfully',
+      logger.info('Shield configured', { agentId: id, protocol, strength: validation.strength });
+
+      sendSuccess(res, {
         protocol: shield.protocol,
         strength: validation.strength,
         valid: validation.valid,
-        vulnerabilities: validation.vulnerabilities
+        vulnerabilities: validation.vulnerabilities,
       });
-    } catch (error) {
-      console.error('[API] Shield error:', error);
-      res.status(500).json({ error: 'Failed to configure shield' });
-    }
-  });
+    })
+  );
 
   // ================= MATCH ROUTES =================
 
   // Get match details
-  app.get('/matches/:id', async (req: Request, res: Response) => {
-    try {
+  app.get(
+    '/matches/:id',
+    asyncHandler(async (req: Request, res: Response) => {
+      const id = UUIDSchema.parse(req.params.id);
+
       const match = await prisma.match.findUnique({
-        where: { id: req.params.id },
+        where: { id },
         include: {
           agentA: { select: { id: true, name: true, category: true, eloRating: true } },
           agentB: { select: { id: true, name: true, category: true, eloRating: true } },
-          winner: { select: { id: true, name: true } }
-        }
+          winner: { select: { id: true, name: true } },
+        },
       });
 
       if (!match) {
-        res.status(404).json({ error: 'Match not found' });
-        return;
+        throw new NotFoundError('Match');
       }
 
-      res.json({
+      sendSuccess(res, {
         id: match.id,
         status: match.status,
         agentA: match.agentA,
@@ -157,53 +211,62 @@ export function setupRoutes(app: Express): void {
         winner: match.winner,
         scores: match.scores,
         startedAt: match.startedAt,
-        endedAt: match.endedAt
+        endedAt: match.endedAt,
+        duration: match.endedAt && match.startedAt
+          ? match.endedAt.getTime() - match.startedAt.getTime()
+          : null,
       });
-    } catch (error) {
-      console.error('[API] Get match error:', error);
-      res.status(500).json({ error: 'Failed to fetch match' });
-    }
-  });
+    })
+  );
 
   // Get recent matches
-  app.get('/matches', async (req: Request, res: Response) => {
-    try {
-      const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
-      const status = req.query.status as string;
+  app.get(
+    '/matches',
+    asyncHandler(async (req: Request, res: Response) => {
+      const { limit, status, offset } = MatchQuerySchema.parse(req.query);
 
-      const where = status ? { status: status as any } : {};
+      const where = status ? { status: status as 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' } : {};
 
-      const matches = await prisma.match.findMany({
-        where,
-        include: {
-          agentA: { select: { name: true } },
-          agentB: { select: { name: true } },
-          winner: { select: { name: true } }
+      const [matches, total] = await Promise.all([
+        prisma.match.findMany({
+          where,
+          include: {
+            agentA: { select: { name: true, eloRating: true } },
+            agentB: { select: { name: true, eloRating: true } },
+            winner: { select: { name: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+          skip: offset,
+        }),
+        prisma.match.count({ where }),
+      ]);
+
+      sendSuccess(res, {
+        matches: matches.map((m) => ({
+          id: m.id,
+          agentA: { name: m.agentA.name, elo: m.agentA.eloRating },
+          agentB: { name: m.agentB.name, elo: m.agentB.eloRating },
+          winner: m.winner?.name || null,
+          status: m.status,
+          startedAt: m.startedAt,
+        })),
+        pagination: {
+          total,
+          limit,
+          offset,
+          hasMore: offset + matches.length < total,
         },
-        orderBy: { createdAt: 'desc' },
-        take: limit
       });
-
-      res.json(matches.map(m => ({
-        id: m.id,
-        agentA: m.agentA.name,
-        agentB: m.agentB.name,
-        winner: m.winner?.name || null,
-        status: m.status,
-        startedAt: m.startedAt
-      })));
-    } catch (error) {
-      console.error('[API] Get matches error:', error);
-      res.status(500).json({ error: 'Failed to fetch matches' });
-    }
-  });
+    })
+  );
 
   // ================= LEADERBOARD =================
 
-  app.get('/leaderboard', async (req: Request, res: Response) => {
-    try {
-      const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
-      const category = req.query.category as string;
+  app.get(
+    '/leaderboard',
+    asyncHandler(async (req: Request, res: Response) => {
+      const { limit, category } = LeaderboardQuerySchema.parse(req.query);
 
       const where = category ? { category } : {};
 
@@ -217,102 +280,151 @@ export function setupRoutes(app: Express): void {
           category: true,
           eloRating: true,
           wins: true,
-          losses: true
-        }
+          losses: true,
+        },
       });
 
-      res.json(agents.map((agent, index) => ({
-        rank: index + 1,
-        ...agent,
-        winRate: agent.wins + agent.losses > 0
-          ? Math.round((agent.wins / (agent.wins + agent.losses)) * 100)
-          : 0
-      })));
-    } catch (error) {
-      console.error('[API] Leaderboard error:', error);
-      res.status(500).json({ error: 'Failed to fetch leaderboard' });
-    }
-  });
+      sendSuccess(res, {
+        leaderboard: agents.map((agent, index) => {
+          const totalGames = agent.wins + agent.losses;
+          return {
+            rank: index + 1,
+            ...agent,
+            winRate: totalGames > 0 ? Math.round((agent.wins / totalGames) * 100) : 0,
+            totalGames,
+          };
+        }),
+      });
+    })
+  );
 
   // ================= MOLT FILES =================
 
   // Download molt file
-  app.get('/molt/:matchId', async (req: Request, res: Response) => {
-    try {
+  app.get(
+    '/molt/:matchId',
+    asyncHandler(async (req: Request, res: Response) => {
+      const matchId = UUIDSchema.parse(req.params.matchId);
+
       const match = await prisma.match.findUnique({
-        where: { id: req.params.matchId }
+        where: { id: matchId },
       });
 
       if (!match || !match.moltFilePath) {
-        res.status(404).json({ error: 'Molt file not found' });
-        return;
+        throw new NotFoundError('Molt file');
       }
 
       const content = await readFile(match.moltFilePath, 'utf-8');
       const moltFile = JSON.parse(content);
 
-      res.json(moltFile);
-    } catch (error) {
-      console.error('[API] Molt download error:', error);
-      res.status(500).json({ error: 'Failed to fetch molt file' });
-    }
-  });
+      sendSuccess(res, moltFile);
+    })
+  );
 
   // Verify molt file integrity
-  app.post('/molt/:matchId/verify', async (req: Request, res: Response) => {
-    try {
+  app.post(
+    '/molt/:matchId/verify',
+    asyncHandler(async (req: Request, res: Response) => {
+      const matchId = UUIDSchema.parse(req.params.matchId);
+
       const match = await prisma.match.findUnique({
-        where: { id: req.params.matchId }
+        where: { id: matchId },
       });
 
       if (!match || !match.moltFilePath) {
-        res.status(404).json({ error: 'Molt file not found' });
-        return;
+        throw new NotFoundError('Molt file');
       }
 
       const moltFile = await MoltbookLogger.loadFromFile(match.moltFilePath);
       const isValid = MoltbookLogger.verifyMoltFile(moltFile);
 
-      res.json({
-        matchId: req.params.matchId,
+      sendSuccess(res, {
+        matchId,
         valid: isValid,
         eventCount: moltFile.events.length,
-        signature: moltFile.signature
+        signature: moltFile.signature,
+        chainIntegrity: isValid ? 'VERIFIED' : 'CORRUPTED',
       });
-    } catch (error) {
-      console.error('[API] Molt verify error:', error);
-      res.status(500).json({ error: 'Failed to verify molt file' });
-    }
-  });
+    })
+  );
 
   // ================= STATS =================
 
-  app.get('/stats', async (req: Request, res: Response) => {
-    try {
-      const [totalAgents, totalMatches, completedMatches, categories] = await Promise.all([
-        prisma.agent.count(),
-        prisma.match.count(),
-        prisma.match.count({ where: { status: 'COMPLETED' } }),
-        prisma.agent.groupBy({
-          by: ['category'],
-          _count: { category: true }
-        })
-      ]);
+  app.get(
+    '/stats',
+    asyncHandler(async (req: Request, res: Response) => {
+      const [totalAgents, totalMatches, completedMatches, inProgressMatches, categories, topAgents] =
+        await Promise.all([
+          prisma.agent.count(),
+          prisma.match.count(),
+          prisma.match.count({ where: { status: 'COMPLETED' } }),
+          prisma.match.count({ where: { status: 'IN_PROGRESS' } }),
+          prisma.agent.groupBy({
+            by: ['category'],
+            _count: { category: true },
+          }),
+          prisma.agent.findMany({
+            orderBy: { eloRating: 'desc' },
+            take: 3,
+            select: { name: true, eloRating: true },
+          }),
+        ]);
 
-      res.json({
+      sendSuccess(res, {
         totalAgents,
         totalMatches,
         completedMatches,
-        categories: categories.map(c => ({
+        inProgressMatches,
+        categories: categories.map((c) => ({
           name: c.category,
-          count: c._count.category
-        }))
+          count: c._count.category,
+        })),
+        topAgents,
       });
-    } catch (error) {
-      console.error('[API] Stats error:', error);
-      res.status(500).json({ error: 'Failed to fetch stats' });
+    })
+  );
+
+  // ================= ERROR HANDLER =================
+
+  app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+    // Zod validation errors
+    if (err instanceof ZodError) {
+      const response: ApiResponse = {
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid request data',
+          details: err.issues.map((issue) => ({
+            field: issue.path.join('.'),
+            message: issue.message,
+          })),
+        },
+        meta: { timestamp: Date.now() },
+      };
+      res.status(400).json(response);
+      return;
     }
+
+    // App errors
+    if (err instanceof AppError) {
+      logger.warn('Request error', {
+        code: err.code,
+        message: err.message,
+        path: req.path,
+      });
+      sendError(res, err);
+      return;
+    }
+
+    // Unknown errors
+    logger.error('Unhandled error', {
+      error: err.message,
+      stack: err.stack,
+      path: req.path,
+    });
+
+    sendError(res, new Error('Internal server error'));
   });
 
-  console.log('[API] Routes configured');
+  logger.info('API routes configured');
 }

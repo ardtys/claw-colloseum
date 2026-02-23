@@ -4,6 +4,7 @@ import { prisma } from '../index.js';
 import { BattleEngine, AgentState } from '../arena-logic/battle.js';
 import { OpenClaw } from '../claw-protocols/shield.js';
 import { v4 as uuidv4 } from 'uuid';
+import logger from '../utils/logger.js';
 
 interface QueuedAgent {
   id: string;
@@ -12,6 +13,7 @@ interface QueuedAgent {
   eloRating: number;
   socketId: string;
   queuedAt: number;
+  totalGames: number;
 }
 
 interface MatchJob {
@@ -20,66 +22,110 @@ interface MatchJob {
   agentB: QueuedAgent;
 }
 
-const ELO_RANGE = 200;
-const QUEUE_TIMEOUT = 30000; // 30 seconds
+// Matchmaking configuration
+const CONFIG = {
+  BASE_ELO_RANGE: 200,
+  ELO_EXPANSION_RATE: 50, // Expand by 50 ELO every 10 seconds
+  ELO_EXPANSION_INTERVAL: 10000, // 10 seconds
+  QUEUE_TIMEOUT: 60000, // 60 seconds max wait
+  CATEGORY_MATCH_TIMEOUT: 15000, // After 15s, ignore category
+  MATCH_CHECK_INTERVAL: 1000, // Check every second
+  MAX_ELO_RANGE: 500, // Maximum ELO difference
+};
+
+// ELO bucket system for O(1) matching
+const ELO_BUCKET_SIZE = 100;
 
 export class MatchmakingQueue {
   private io: Server;
   private queue: Queue.Queue<MatchJob>;
   private waitingAgents: Map<string, QueuedAgent> = new Map();
+  private eloBuckets: Map<number, Set<string>> = new Map();
   private matchCheckInterval: NodeJS.Timeout | null = null;
+  private activeBattles: Map<string, BattleEngine> = new Map();
 
   constructor(io: Server) {
     this.io = io;
     this.queue = new Queue<MatchJob>('matchmaking', {
       redis: {
         host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379')
-      }
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+      },
+      defaultJobOptions: {
+        removeOnComplete: 100,
+        removeOnFail: 50,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
+      },
     });
 
     this.setupQueueProcessing();
   }
 
+  private getEloBucket(elo: number): number {
+    return Math.floor(elo / ELO_BUCKET_SIZE);
+  }
+
+  private addToBucket(agent: QueuedAgent): void {
+    const bucket = this.getEloBucket(agent.eloRating);
+    if (!this.eloBuckets.has(bucket)) {
+      this.eloBuckets.set(bucket, new Set());
+    }
+    this.eloBuckets.get(bucket)!.add(agent.id);
+  }
+
+  private removeFromBucket(agent: QueuedAgent): void {
+    const bucket = this.getEloBucket(agent.eloRating);
+    this.eloBuckets.get(bucket)?.delete(agent.id);
+  }
+
   async initialize(): Promise<void> {
     // Clear any stale jobs
     await this.queue.empty();
-    console.log('[MATCHMAKING] Queue initialized');
+    await this.queue.clean(0, 'completed');
+    await this.queue.clean(0, 'failed');
+
+    logger.info('Matchmaking queue initialized');
 
     // Start match checking
     this.matchCheckInterval = setInterval(() => {
       this.tryMatchmaking();
-    }, 1000);
+    }, CONFIG.MATCH_CHECK_INTERVAL);
   }
 
   private setupQueueProcessing(): void {
     this.queue.process(async (job) => {
       const { matchId, agentA, agentB } = job.data;
 
-      console.log(`[MATCHMAKING] Processing match ${matchId}`);
+      logger.info('Processing match', { matchId, agentA: agentA.name, agentB: agentB.name });
 
       // Fetch full agent data
       const [dbAgentA, dbAgentB] = await Promise.all([
         prisma.agent.findUnique({ where: { id: agentA.id } }),
-        prisma.agent.findUnique({ where: { id: agentB.id } })
+        prisma.agent.findUnique({ where: { id: agentB.id } }),
       ]);
 
       if (!dbAgentA || !dbAgentB) {
         throw new Error('Agent not found');
       }
 
-      // Create agent states
+      // Create agent states with full data
       const stateA: AgentState = {
         id: dbAgentA.id,
         name: dbAgentA.name,
         category: dbAgentA.category,
         shield: dbAgentA.shieldConfig
-          ? (dbAgentA.shieldConfig as AgentState['shield'])
+          ? (dbAgentA.shieldConfig as unknown as AgentState['shield'])
           : OpenClaw.createShield('AES-256'),
         health: 100,
         integrity: 100,
         attackPower: 30 + Math.random() * 20,
-        speed: 50
+        speed: 50,
+        totalGames: dbAgentA.wins + dbAgentA.losses,
+        eloRating: dbAgentA.eloRating,
       };
 
       const stateB: AgentState = {
@@ -87,27 +133,39 @@ export class MatchmakingQueue {
         name: dbAgentB.name,
         category: dbAgentB.category,
         shield: dbAgentB.shieldConfig
-          ? (dbAgentB.shieldConfig as AgentState['shield'])
+          ? (dbAgentB.shieldConfig as unknown as AgentState['shield'])
           : OpenClaw.createShield('AES-256'),
         health: 100,
         integrity: 100,
         attackPower: 30 + Math.random() * 20,
-        speed: 50
+        speed: 50,
+        totalGames: dbAgentB.wins + dbAgentB.losses,
+        eloRating: dbAgentB.eloRating,
       };
 
       // Start battle
       const engine = new BattleEngine(this.io, matchId, stateA, stateB);
-      await engine.start();
+      this.activeBattles.set(matchId, engine);
+
+      try {
+        await engine.start();
+      } finally {
+        this.activeBattles.delete(matchId);
+      }
 
       return { matchId, completed: true };
     });
 
     this.queue.on('completed', (job, result) => {
-      console.log(`[MATCHMAKING] Match ${result.matchId} completed`);
+      logger.info('Match completed', { matchId: result.matchId });
     });
 
     this.queue.on('failed', (job, err) => {
-      console.error(`[MATCHMAKING] Match failed:`, err);
+      logger.error('Match failed', { matchId: job?.data?.matchId, error: err.message });
+    });
+
+    this.queue.on('stalled', (job) => {
+      logger.warn('Match stalled', { matchId: job.data.matchId });
     });
   }
 
@@ -116,7 +174,7 @@ export class MatchmakingQueue {
     socketId: string
   ): Promise<{ position: number; estimatedWait: number }> {
     const agent = await prisma.agent.findUnique({
-      where: { id: agentId }
+      where: { id: agentId },
     });
 
     if (!agent) {
@@ -125,7 +183,7 @@ export class MatchmakingQueue {
 
     // Check if already in queue
     if (this.waitingAgents.has(agentId)) {
-      const position = Array.from(this.waitingAgents.keys()).indexOf(agentId) + 1;
+      const position = this.getQueuePosition(agentId);
       return { position, estimatedWait: position * 5 };
     }
 
@@ -135,16 +193,21 @@ export class MatchmakingQueue {
       category: agent.category,
       eloRating: agent.eloRating,
       socketId,
-      queuedAt: Date.now()
+      queuedAt: Date.now(),
+      totalGames: agent.wins + agent.losses,
     };
 
     this.waitingAgents.set(agentId, queuedAgent);
+    this.addToBucket(queuedAgent);
 
     const position = this.waitingAgents.size;
-    console.log(`[MATCHMAKING] Agent ${agent.name} joined queue (position: ${position})`);
+    logger.info('Agent joined queue', { agentId, name: agent.name, position });
 
     // Notify the agent
     this.io.to(socketId).emit('queue:joined', { position, agentId });
+
+    // Broadcast queue update
+    this.broadcastQueueUpdate();
 
     return { position, estimatedWait: Math.max(5, (position - 1) * 5) };
   }
@@ -152,56 +215,122 @@ export class MatchmakingQueue {
   removeFromQueue(agentId: string): boolean {
     const agent = this.waitingAgents.get(agentId);
     if (agent) {
+      this.removeFromBucket(agent);
       this.waitingAgents.delete(agentId);
       this.io.to(agent.socketId).emit('queue:left', { agentId });
+      logger.info('Agent left queue', { agentId, name: agent.name });
+      this.broadcastQueueUpdate();
       return true;
     }
     return false;
   }
 
+  private getQueuePosition(agentId: string): number {
+    const agents = Array.from(this.waitingAgents.keys());
+    return agents.indexOf(agentId) + 1;
+  }
+
+  private getDynamicEloRange(waitTime: number): number {
+    const expansions = Math.floor(waitTime / CONFIG.ELO_EXPANSION_INTERVAL);
+    return Math.min(
+      CONFIG.MAX_ELO_RANGE,
+      CONFIG.BASE_ELO_RANGE + expansions * CONFIG.ELO_EXPANSION_RATE
+    );
+  }
+
   private async tryMatchmaking(): Promise<void> {
+    if (this.waitingAgents.size < 2) return;
+
     const agents = Array.from(this.waitingAgents.values());
-
-    if (agents.length < 2) return;
-
-    // Sort by queue time
+    // Sort by queue time (oldest first)
     agents.sort((a, b) => a.queuedAt - b.queuedAt);
 
-    for (let i = 0; i < agents.length - 1; i++) {
-      const agentA = agents[i];
+    const matched = new Set<string>();
 
-      // Find suitable opponent
-      for (let j = i + 1; j < agents.length; j++) {
-        const agentB = agents[j];
+    for (const agentA of agents) {
+      if (matched.has(agentA.id)) continue;
 
-        // Check Elo range
-        const eloDiff = Math.abs(agentA.eloRating - agentB.eloRating);
-        const waitTime = Date.now() - agentA.queuedAt;
+      const waitTime = Date.now() - agentA.queuedAt;
+      const eloRange = this.getDynamicEloRange(waitTime);
 
-        // Expand range based on wait time
-        const dynamicRange = ELO_RANGE + Math.floor(waitTime / 10000) * 50;
+      // Find best match using bucket system
+      const bestMatch = this.findBestMatch(agentA, eloRange, matched);
 
-        if (eloDiff <= dynamicRange) {
-          // Check category match (optional)
-          const categoryMatch = agentA.category === agentB.category;
-
-          if (categoryMatch || waitTime > 15000) {
-            await this.createMatch(agentA, agentB);
-            return;
-          }
+      if (bestMatch) {
+        matched.add(agentA.id);
+        matched.add(bestMatch.id);
+        await this.createMatch(agentA, bestMatch);
+      } else if (waitTime > CONFIG.QUEUE_TIMEOUT) {
+        // Timeout - match with anyone available
+        const anyMatch = agents.find(
+          (a) => a.id !== agentA.id && !matched.has(a.id)
+        );
+        if (anyMatch) {
+          matched.add(agentA.id);
+          matched.add(anyMatch.id);
+          await this.createMatch(agentA, anyMatch);
         }
-      }
-
-      // Timeout - force match with next available
-      if (Date.now() - agentA.queuedAt > QUEUE_TIMEOUT && agents.length >= 2) {
-        await this.createMatch(agentA, agents[i + 1]);
-        return;
       }
     }
   }
 
+  private findBestMatch(
+    agent: QueuedAgent,
+    eloRange: number,
+    excluded: Set<string>
+  ): QueuedAgent | null {
+    const bucket = this.getEloBucket(agent.eloRating);
+    const bucketsToCheck = Math.ceil(eloRange / ELO_BUCKET_SIZE) + 1;
+    const waitTime = Date.now() - agent.queuedAt;
+    const ignoreCategory = waitTime > CONFIG.CATEGORY_MATCH_TIMEOUT;
+
+    let bestMatch: QueuedAgent | null = null;
+    let bestScore = -Infinity;
+
+    // Check buckets in range
+    for (let offset = -bucketsToCheck; offset <= bucketsToCheck; offset++) {
+      const checkBucket = bucket + offset;
+      const agentsInBucket = this.eloBuckets.get(checkBucket);
+
+      if (!agentsInBucket) continue;
+
+      for (const candidateId of agentsInBucket) {
+        if (candidateId === agent.id || excluded.has(candidateId)) continue;
+
+        const candidate = this.waitingAgents.get(candidateId);
+        if (!candidate) continue;
+
+        const eloDiff = Math.abs(agent.eloRating - candidate.eloRating);
+        if (eloDiff > eloRange) continue;
+
+        // Calculate match score
+        let score = 100 - eloDiff; // Lower ELO diff = higher score
+
+        // Category bonus
+        if (agent.category === candidate.category) {
+          score += 50;
+        } else if (!ignoreCategory) {
+          continue; // Skip non-matching categories if not timed out
+        }
+
+        // Wait time bonus (prioritize longer waiting players)
+        const candidateWait = Date.now() - candidate.queuedAt;
+        score += Math.min(20, candidateWait / 5000);
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = candidate;
+        }
+      }
+    }
+
+    return bestMatch;
+  }
+
   private async createMatch(agentA: QueuedAgent, agentB: QueuedAgent): Promise<void> {
     // Remove from waiting queue
+    this.removeFromBucket(agentA);
+    this.removeFromBucket(agentB);
     this.waitingAgents.delete(agentA.id);
     this.waitingAgents.delete(agentB.id);
 
@@ -213,13 +342,19 @@ export class MatchmakingQueue {
         id: matchId,
         agentAId: agentA.id,
         agentBId: agentB.id,
-        status: 'PENDING'
-      }
+        status: 'PENDING',
+      },
     });
 
     // Notify agents
-    this.io.to(agentA.socketId).emit('match:found', { matchId, opponent: agentB.name });
-    this.io.to(agentB.socketId).emit('match:found', { matchId, opponent: agentA.name });
+    this.io.to(agentA.socketId).emit('match:found', {
+      matchId,
+      opponent: { name: agentB.name, elo: agentB.eloRating },
+    });
+    this.io.to(agentB.socketId).emit('match:found', {
+      matchId,
+      opponent: { name: agentA.name, elo: agentA.eloRating },
+    });
 
     // Join match room
     const socketA = this.io.sockets.sockets.get(agentA.socketId);
@@ -231,21 +366,61 @@ export class MatchmakingQueue {
     // Add to processing queue
     await this.queue.add({ matchId, agentA, agentB });
 
-    console.log(`[MATCHMAKING] Created match ${matchId}: ${agentA.name} vs ${agentB.name}`);
+    logger.info('Match created', {
+      matchId,
+      agentA: agentA.name,
+      agentB: agentB.name,
+      eloDiff: Math.abs(agentA.eloRating - agentB.eloRating),
+    });
+
+    this.broadcastQueueUpdate();
   }
 
-  getQueueStatus(): { total: number; agents: { name: string; position: number }[] } {
+  private broadcastQueueUpdate(): void {
+    const status = this.getQueueStatus();
+    this.io.emit('queue:update', status);
+  }
+
+  getQueueStatus(): {
+    total: number;
+    agents: { name: string; position: number; waitTime: number }[];
+  } {
     const agents = Array.from(this.waitingAgents.values());
+    const now = Date.now();
+
     return {
       total: agents.length,
-      agents: agents.map((a, i) => ({ name: a.name, position: i + 1 }))
+      agents: agents
+        .sort((a, b) => a.queuedAt - b.queuedAt)
+        .map((a, i) => ({
+          name: a.name,
+          position: i + 1,
+          waitTime: Math.floor((now - a.queuedAt) / 1000),
+        })),
     };
+  }
+
+  getActiveBattleCount(): number {
+    return this.activeBattles.size;
   }
 
   async close(): Promise<void> {
     if (this.matchCheckInterval) {
       clearInterval(this.matchCheckInterval);
     }
+
+    // Wait for active battles to complete
+    const timeout = 30000; // 30 seconds
+    const start = Date.now();
+
+    while (this.activeBattles.size > 0 && Date.now() - start < timeout) {
+      logger.info('Waiting for active battles to complete', {
+        count: this.activeBattles.size,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
     await this.queue.close();
+    logger.info('Matchmaking queue closed');
   }
 }

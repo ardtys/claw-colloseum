@@ -1,12 +1,17 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Socket } from 'socket.io-client'
+
+interface QueueAgent {
+  name: string
+  position: number
+  waitTime?: number
+}
 
 interface QueueStatus {
   total: number
-  agents: { name: string; position: number }[]
+  agents: QueueAgent[]
 }
 
 interface MatchQueueProps {
@@ -36,7 +41,7 @@ export function MatchQueue({ socket }: MatchQueueProps) {
       setIsQueued(false)
     })
 
-    socket.on('match:found', (data: { matchId: string; opponent: string }) => {
+    socket.on('match:found', () => {
       setIsQueued(false)
       setMyPosition(null)
     })
@@ -60,99 +65,104 @@ export function MatchQueue({ socket }: MatchQueueProps) {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Beach Entry */}
-      <div className="mb-4">
+    <div className="space-y-6">
+      {/* Join Queue Form */}
+      <div className="space-y-3">
         <div className="flex gap-2">
           <input
             type="text"
             value={agentId}
             onChange={(e) => setAgentId(e.target.value)}
-            placeholder="Enter Agent ID"
+            placeholder="Enter your Agent ID"
             disabled={isQueued}
-            className="flex-1 brutal-border bg-claw-black px-3 py-2 text-sm font-mono text-claw-text placeholder:text-claw-text-dim focus:outline-none focus:border-claw-green disabled:opacity-50"
+            className="input flex-1"
           />
           {!isQueued ? (
             <button
               onClick={handleJoinQueue}
               disabled={!agentId.trim()}
-              className="brutal-button disabled:opacity-50"
+              className="btn-primary disabled:opacity-50"
             >
-              ENTER
+              Join Queue
             </button>
           ) : (
             <button
               onClick={handleLeaveQueue}
-              className="brutal-button-danger"
+              className="btn bg-danger text-white hover:bg-danger/80"
             >
-              LEAVE
+              Leave
             </button>
           )}
         </div>
 
         {myPosition && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-2 p-2 brutal-border border-claw-green"
-          >
-            <span className="terminal-text">
-              QUEUE POSITION: <span className="text-claw-green font-bold">#{myPosition}</span>
-            </span>
-          </motion.div>
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-accent/10 border border-accent/20">
+            <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
+              <span className="text-sm font-bold text-white">#{myPosition}</span>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-text">You are in queue</div>
+              <div className="text-xs text-text-secondary">Waiting for opponent...</div>
+            </div>
+          </div>
         )}
       </div>
 
       {/* Queue Status */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="data-label">QUEUE STATUS</span>
-          <span className="text-xs text-claw-green">
-            {queueStatus.total} WAITING
-          </span>
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-medium text-text">Queue Status</span>
+          <span className="badge-accent">{queueStatus.total} waiting</span>
         </div>
 
-        <div className="brutal-border bg-claw-black p-2 h-32 overflow-y-auto no-scrollbar">
-          <AnimatePresence mode="popLayout">
-            {queueStatus.agents.length === 0 ? (
-              <div className="terminal-text text-claw-text-dim text-center py-4">
-                QUEUE IS EMPTY
-              </div>
-            ) : (
-              queueStatus.agents.map((agent, index) => (
-                <motion.div
+        <div className="bg-bg-tertiary rounded-lg p-3 max-h-48 overflow-y-auto custom-scrollbar">
+          {queueStatus.agents.length === 0 ? (
+            <div className="text-center py-4 text-sm text-text-muted">
+              Queue is empty
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {queueStatus.agents.map((agent, index) => (
+                <div
                   key={`${agent.name}-${index}`}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10 }}
-                  transition={{ duration: 0.1 }}
-                  className="flex items-center gap-2 terminal-text mb-1"
+                  className="flex items-center gap-3 p-2 rounded-md bg-bg-secondary"
                 >
-                  <span className="text-claw-text-dim">#{agent.position}</span>
-                  <span className="text-claw-green">{agent.name}</span>
-                  <motion.span
-                    className="ml-auto w-2 h-2 bg-claw-green"
-                    animate={{ opacity: [1, 0.3, 1] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  />
-                </motion.div>
-              ))
-            )}
-          </AnimatePresence>
+                  <span className="w-6 h-6 flex items-center justify-center rounded bg-bg-tertiary text-xs font-medium text-text-muted">
+                    {agent.position}
+                  </span>
+                  <span className="text-sm text-text flex-1 truncate">{agent.name}</span>
+                  {agent.waitTime !== undefined && (
+                    <span className="text-xs text-text-muted">{agent.waitTime}s</span>
+                  )}
+                  <span className="w-2 h-2 bg-success rounded-full animate-pulse" />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Matchmaking Info */}
-      <div className="mt-auto">
-        <pre className="ascii-art text-[10px] text-center">
-{`╔════════════════════════════════╗
-║      MATCHMAKING SYSTEM        ║
-║   ─────────────────────────    ║
-║   ELO RANGE: ±200              ║
-║   CATEGORY: PREFERRED          ║
-║   TIMEOUT: 30s                 ║
-╚════════════════════════════════╝`}
-        </pre>
+      <div className="p-4 rounded-lg bg-bg-tertiary border border-border">
+        <h4 className="text-sm font-medium text-text mb-3">Matchmaking Settings</h4>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="text-text-muted">ELO Range</span>
+            <div className="text-text font-medium">±200</div>
+          </div>
+          <div>
+            <span className="text-text-muted">Category</span>
+            <div className="text-text font-medium">Preferred</div>
+          </div>
+          <div>
+            <span className="text-text-muted">Timeout</span>
+            <div className="text-text font-medium">60s</div>
+          </div>
+          <div>
+            <span className="text-text-muted">Max Range</span>
+            <div className="text-text font-medium">±500</div>
+          </div>
+        </div>
       </div>
     </div>
   )

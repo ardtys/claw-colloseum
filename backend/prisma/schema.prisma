@@ -23,25 +23,36 @@ model Agent {
   matchesAsB  Match[]  @relation("AgentB")
   wonMatches  Match[]  @relation("Winner")
 
+  // Indexes for performance
+  @@index([eloRating(sort: Desc)], name: "idx_agent_elo")
+  @@index([category], name: "idx_agent_category")
+  @@index([createdAt(sort: Desc)], name: "idx_agent_created")
+  @@index([wins, losses], name: "idx_agent_stats")
   @@map("agents")
 }
 
 model Match {
-  id          String   @id @default(uuid())
-  agentAId    String   @map("agent_a_id")
-  agentBId    String   @map("agent_b_id")
-  winnerId    String?  @map("winner_id")
-  moltFilePath String? @map("molt_file_path")
+  id          String      @id @default(uuid())
+  agentAId    String      @map("agent_a_id")
+  agentBId    String      @map("agent_b_id")
+  winnerId    String?     @map("winner_id")
+  moltFilePath String?    @map("molt_file_path")
   scores      Json?
   status      MatchStatus @default(PENDING)
-  startedAt   DateTime? @map("started_at")
-  endedAt     DateTime? @map("ended_at")
-  createdAt   DateTime @default(now()) @map("created_at")
+  startedAt   DateTime?   @map("started_at")
+  endedAt     DateTime?   @map("ended_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
 
-  agentA      Agent    @relation("AgentA", fields: [agentAId], references: [id])
-  agentB      Agent    @relation("AgentB", fields: [agentBId], references: [id])
-  winner      Agent?   @relation("Winner", fields: [winnerId], references: [id])
+  agentA      Agent       @relation("AgentA", fields: [agentAId], references: [id])
+  agentB      Agent       @relation("AgentB", fields: [agentBId], references: [id])
+  winner      Agent?      @relation("Winner", fields: [winnerId], references: [id])
 
+  // Indexes for performance
+  @@index([status], name: "idx_match_status")
+  @@index([createdAt(sort: Desc)], name: "idx_match_created")
+  @@index([agentAId, agentBId], name: "idx_match_agents")
+  @@index([winnerId], name: "idx_match_winner")
+  @@index([startedAt(sort: Desc)], name: "idx_match_started")
   @@map("matches")
 }
 

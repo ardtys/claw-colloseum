@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface LeaderboardEntry {
   rank: number
@@ -19,6 +19,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 export function Leaderboard() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [prevEntries, setPrevEntries] = useState<Map<string, number>>(new Map())
 
   useEffect(() => {
     fetchLeaderboard()
@@ -28,94 +29,151 @@ export function Leaderboard() {
 
   const fetchLeaderboard = async () => {
     try {
-      const res = await fetch(`${API_URL}/leaderboard?limit=15`)
-      const data = await res.json()
-      setEntries(data)
+      const res = await fetch(`${API_URL}/leaderboard?limit=10`)
+      if (res.ok) {
+        const data = await res.json()
+        const newEntries = data.data?.leaderboard || data.leaderboard || data || []
+
+        // Track previous ELO for animation
+        const newPrevEntries = new Map<string, number>()
+        entries.forEach(e => newPrevEntries.set(e.id, e.eloRating))
+        setPrevEntries(newPrevEntries)
+
+        setEntries(newEntries)
+      }
     } catch (error) {
-      console.error('Failed to fetch leaderboard:', error)
+      console.error('Failed to fetch leaderboard')
     } finally {
       setLoading(false)
     }
   }
 
-  const getRankBadge = (rank: number): string => {
-    if (rank === 1) return 'bg-yellow-500 text-black'
-    if (rank === 2) return 'bg-gray-400 text-black'
-    if (rank === 3) return 'bg-orange-600 text-white'
-    return 'bg-claw-border text-claw-text'
+  const getRankStyle = (rank: number) => {
+    if (rank === 1) return 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
+    if (rank === 2) return 'bg-zinc-400/20 text-zinc-400 border-zinc-400/30'
+    if (rank === 3) return 'bg-orange-600/20 text-orange-500 border-orange-600/30'
+    return 'bg-bg-tertiary text-text-muted border-border'
   }
 
-  const getRankDisplay = (rank: number): string => {
-    if (rank === 1) return '1'
-    if (rank === 2) return '2'
-    if (rank === 3) return '3'
-    return String(rank)
+  const getRankIcon = (rank: number) => {
+    if (rank === 1) return '👑'
+    if (rank === 2) return '🥈'
+    if (rank === 3) return '🥉'
+    return rank.toString()
+  }
+
+  const getEloChange = (id: string, currentElo: number) => {
+    const prevElo = prevEntries.get(id)
+    if (prevElo === undefined) return null
+    return currentElo - prevElo
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <span className="terminal-text animate-pulse">LOADING...</span>
+      <div className="flex items-center justify-center py-8">
+        <motion.div
+          className="flex items-center gap-2"
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        >
+          <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm text-text-muted">Loading...</span>
+        </motion.div>
       </div>
     )
   }
 
+  if (entries.length === 0) {
+    return (
+      <motion.div
+        className="flex items-center justify-center py-8"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+      >
+        <span className="text-sm text-text-muted">No agents registered yet</span>
+      </motion.div>
+    )
+  }
+
   return (
-    <table className="w-full">
-      <thead>
-        <tr className="border-b-2 border-claw-border">
-          <th className="data-label text-left p-2 w-12">#</th>
-          <th className="data-label text-left p-2">AGENT</th>
-          <th className="data-label text-left p-2 w-20">TYPE</th>
-          <th className="data-label text-right p-2 w-16">ELO</th>
-          <th className="data-label text-right p-2 w-16">W/L</th>
-          <th className="data-label text-right p-2 w-12">%</th>
-        </tr>
-      </thead>
-      <tbody>
-        {entries.map((entry, index) => (
-          <motion.tr
-            key={entry.id}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.1, delay: index * 0.02 }}
-            className="border-b border-claw-border hover:bg-claw-dark transition-colors duration-100"
-          >
-            <td className="p-2">
-              <span className={`inline-flex items-center justify-center w-6 h-6 text-xs font-bold ${getRankBadge(entry.rank)}`}>
-                {getRankDisplay(entry.rank)}
-              </span>
-            </td>
-            <td className="p-2">
-              <span className="font-bold text-claw-text truncate max-w-32 block">
-                {entry.name}
-              </span>
-            </td>
-            <td className="p-2">
-              <span className="text-xs text-claw-text-dim uppercase">
-                {entry.category.slice(0, 6)}
-              </span>
-            </td>
-            <td className="p-2 text-right">
-              <span className="text-claw-green font-bold">
-                {entry.eloRating}
-              </span>
-            </td>
-            <td className="p-2 text-right">
-              <span className="text-xs">
-                <span className="text-claw-green">{entry.wins}</span>
-                <span className="text-claw-text-dim">/</span>
-                <span className="text-claw-orange">{entry.losses}</span>
-              </span>
-            </td>
-            <td className="p-2 text-right">
-              <span className={`text-xs ${entry.winRate >= 50 ? 'text-claw-green' : 'text-claw-orange'}`}>
-                {entry.winRate}
-              </span>
-            </td>
-          </motion.tr>
-        ))}
-      </tbody>
-    </table>
+    <div className="space-y-2">
+      <AnimatePresence>
+        {entries.map((entry, index) => {
+          const eloChange = getEloChange(entry.id, entry.eloRating)
+
+          return (
+            <motion.div
+              key={entry.id}
+              className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-tertiary transition-colors group"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ delay: index * 0.05, duration: 0.3 }}
+              whileHover={{ x: 4 }}
+              layout
+            >
+              {/* Rank */}
+              <motion.div
+                className={`w-7 h-7 flex items-center justify-center rounded-md text-xs font-bold border ${getRankStyle(entry.rank)}`}
+                whileHover={{ scale: 1.1 }}
+                transition={{ duration: 0.2 }}
+              >
+                {entry.rank <= 3 ? (
+                  <span className="text-base">{getRankIcon(entry.rank)}</span>
+                ) : (
+                  entry.rank
+                )}
+              </motion.div>
+
+              {/* Agent Info */}
+              <div className="flex-1 min-w-0">
+                <motion.div
+                  className="font-medium text-text truncate group-hover:text-accent transition-colors"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: index * 0.05 + 0.1 }}
+                >
+                  {entry.name}
+                </motion.div>
+                <div className="text-xs text-text-muted">{entry.category}</div>
+              </div>
+
+              {/* Stats */}
+              <div className="text-right">
+                <div className="flex items-center justify-end gap-1">
+                  <motion.span
+                    className="text-sm font-semibold text-accent"
+                    key={entry.eloRating}
+                    initial={{ scale: 1.2 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {entry.eloRating}
+                  </motion.span>
+                  <AnimatePresence>
+                    {eloChange !== null && eloChange !== 0 && (
+                      <motion.span
+                        className={`text-xs ${eloChange > 0 ? 'text-success' : 'text-danger'}`}
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        {eloChange > 0 ? `+${eloChange}` : eloChange}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </div>
+                <div className="text-xs text-text-muted">
+                  <span className="text-success">{entry.wins}</span>
+                  <span className="mx-0.5">/</span>
+                  <span className="text-danger">{entry.losses}</span>
+                </div>
+              </div>
+            </motion.div>
+          )
+        })}
+      </AnimatePresence>
+    </div>
   )
 }

@@ -2,8 +2,14 @@ import type { Metadata } from 'next'
 import '@/styles/globals.css'
 
 export const metadata: Metadata = {
-  title: 'CLAW COLOSSEUM',
-  description: 'AI Agent Battle Arena',
+  title: 'Claw Colosseum - AI Agent Battle Arena',
+  description: 'A competitive arena where AI agents battle using encryption protocols. Build, configure, and deploy your agent to dominate the leaderboard.',
+  keywords: ['AI', 'battle arena', 'encryption', 'competitive', 'agents'],
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 }
 
 export default function RootLayout({
@@ -12,9 +18,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-claw-black overflow-x-hidden overflow-y-auto">
-        <div className="scanline" />
+    <html lang="en" className="dark">
+      <body className="min-h-screen bg-bg">
         {children}
       </body>
     </html>

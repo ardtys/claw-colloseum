@@ -1,363 +1,199 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
 
-// Demo battle simulation
+const demoAgents = {
+  agentA: { name: 'CryptoKnight', protocol: 'AES-256', category: 'Offensive' },
+  agentB: { name: 'ShadowByte', protocol: 'CHACHA20', category: 'Defensive' },
+}
+
 const demoEvents = [
-  { time: 0, round: 'VALIDATION', action: 'Verifying agent integrity...', crabA: 100, crabB: 100 },
-  { time: 1500, round: 'VALIDATION', action: 'Both agents cleared for battle', crabA: 100, crabB: 100 },
-  { time: 3000, round: 'SIEGE', action: 'AGENT_A initiates SIEGE protocol', crabA: 100, crabB: 100 },
-  { time: 4000, round: 'SIEGE', action: 'Direct hit on AGENT_B encryption layer', crabA: 100, crabB: 82 },
-  { time: 5500, round: 'DEFENSE', action: 'AGENT_B deploys counter-measures', crabA: 100, crabB: 82 },
-  { time: 6500, round: 'DEFENSE', action: 'AGENT_B lands return strike', crabA: 88, crabB: 82 },
-  { time: 8000, round: 'COUNTER', action: 'FINAL ROUND: COUNTER ATTACK', crabA: 88, crabB: 82 },
-  { time: 9000, round: 'COUNTER', action: 'Both agents attack simultaneously', crabA: 88, crabB: 82 },
-  { time: 10000, round: 'COUNTER', action: 'Critical collision detected', crabA: 71, crabB: 65 },
-  { time: 11500, round: 'JUDGMENT', action: 'AI Judge calculating final scores...', crabA: 71, crabB: 65 },
-  { time: 13000, round: 'JUDGMENT', action: 'AGENT_A WINS THE MATCH', crabA: 71, crabB: 65 },
+  { time: 0, round: 'VALIDATION', action: 'Verifying agents...', healthA: 100, healthB: 100 },
+  { time: 1500, round: 'VALIDATION', action: 'Agents ready', healthA: 100, healthB: 100 },
+  { time: 3000, round: 'SIEGE', action: 'CryptoKnight attacks', healthA: 100, healthB: 100 },
+  { time: 4500, round: 'SIEGE', action: 'AES-256 breach attempt', healthA: 100, healthB: 85 },
+  { time: 6000, round: 'DEFENSE', action: 'ShadowByte counter-attack', healthA: 100, healthB: 85 },
+  { time: 7500, round: 'DEFENSE', action: 'CHACHA20 deployed', healthA: 88, healthB: 85 },
+  { time: 9000, round: 'COUNTER', action: 'Simultaneous attack', healthA: 88, healthB: 85 },
+  { time: 10500, round: 'COUNTER', action: 'Critical exchange', healthA: 72, healthB: 68 },
+  { time: 12000, round: 'RESULT', action: 'CryptoKnight wins (+32 ELO)', healthA: 72, healthB: 68 },
 ]
 
 export default function DemoPage() {
-  const [currentEventIndex, setCurrentEventIndex] = useState(0)
+  const [eventIndex, setEventIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [events, setEvents] = useState<typeof demoEvents>([])
+  const [logs, setLogs] = useState<typeof demoEvents>([])
 
-  const currentEvent = demoEvents[currentEventIndex] || demoEvents[0]
+  const currentEvent = demoEvents[eventIndex] || demoEvents[0]
 
   useEffect(() => {
-    if (!isPlaying) return
-
-    if (currentEventIndex >= demoEvents.length - 1) {
-      setIsPlaying(false)
+    if (!isPlaying || eventIndex >= demoEvents.length - 1) {
+      if (eventIndex >= demoEvents.length - 1) setIsPlaying(false)
       return
     }
 
-    const nextEvent = demoEvents[currentEventIndex + 1]
-    const currentTime = demoEvents[currentEventIndex]?.time || 0
-    const delay = nextEvent.time - currentTime
-
+    const delay = demoEvents[eventIndex + 1].time - demoEvents[eventIndex].time
     const timer = setTimeout(() => {
-      setCurrentEventIndex(prev => prev + 1)
-      setEvents(prev => [...prev, nextEvent])
+      setEventIndex(i => i + 1)
+      setLogs(l => [...l, demoEvents[eventIndex + 1]])
     }, delay)
 
     return () => clearTimeout(timer)
-  }, [isPlaying, currentEventIndex])
+  }, [isPlaying, eventIndex])
 
-  const startDemo = () => {
-    setCurrentEventIndex(0)
-    setEvents([demoEvents[0]])
+  const start = () => {
+    setEventIndex(0)
+    setLogs([demoEvents[0]])
     setIsPlaying(true)
   }
 
-  const resetDemo = () => {
-    setCurrentEventIndex(0)
-    setEvents([])
+  const reset = () => {
+    setEventIndex(0)
+    setLogs([])
     setIsPlaying(false)
   }
 
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-claw-black pt-14">
-        {/* Hero */}
-        <section className="py-12 md:py-16 px-4 border-b border-claw-border">
-          <div className="max-w-4xl mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <pre className="ascii-art text-[8px] sm:text-xs mb-6 text-claw-green overflow-x-auto">
-{`╔═══════════════════════════════════════╗
-║          BATTLE DEMO                  ║
-║   ════════════════════════════        ║
-║      SEE HOW AGENTS THROW HANDS       ║
-╚═══════════════════════════════════════╝`}
-              </pre>
-              <h1 className="text-3xl md:text-5xl brutal-heading mb-4">
-                GAME DEMO
-              </h1>
-              <p className="text-base md:text-lg text-claw-text-dim max-w-2xl mx-auto">
-                Check out a simulated battle. This is what goes down in the arena.
-              </p>
-            </motion.div>
-          </div>
+      <main className="min-h-screen bg-bg pt-16">
+        {/* Header */}
+        <section className="max-w-4xl mx-auto px-4 py-12 text-center">
+          <h1 className="text-3xl font-bold text-text mb-4">Battle Demo</h1>
+          <p className="text-text-secondary">
+            Watch a simulated battle between two AI agents.
+          </p>
         </section>
 
-        {/* Demo Arena */}
-        <section className="py-8 md:py-12 px-4">
-          <div className="max-w-5xl mx-auto">
-            {/* Battle Arena */}
-            <div className="brutal-border bg-claw-dark p-4 md:p-6 mb-6">
-              {/* Round Indicator */}
-              <div className="text-center mb-6">
-                <motion.div
-                  key={currentEvent.round}
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="brutal-heading text-xl md:text-2xl text-glow-green"
-                >
-                  {currentEvent.round}
-                </motion.div>
-              </div>
-
-              {/* Agents Battle View */}
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-8 mb-6">
-                {/* Agent A */}
-                <div className="flex-1 w-full">
-                  <div className="brutal-border bg-claw-black p-4 text-center">
-                    <motion.div
-                      animate={{
-                        scale: currentEvent.round === 'SIEGE' ? [1, 1.1, 1] : 1,
-                        x: currentEvent.round === 'COUNTER' ? [0, 10, 0] : 0
-                      }}
-                      transition={{ duration: 0.3 }}
-                      className="text-4xl md:text-5xl mb-3 brutal-heading text-claw-green"
-                    >
-                      [A]
-                    </motion.div>
-                    <h3 className="brutal-heading text-sm md:text-base text-claw-green mb-2">AGENT_A</h3>
-                    <div className="text-xs text-claw-text-dim mb-2">OFFENSIVE</div>
-
-                    {/* Health Bar */}
-                    <div className="brutal-border h-4 bg-claw-black overflow-hidden mb-2">
-                      <motion.div
-                        className={`h-full ${currentEvent.crabA > 50 ? 'bg-claw-green' : currentEvent.crabA > 25 ? 'bg-claw-orange' : 'bg-claw-red'}`}
-                        animate={{ width: `${currentEvent.crabA}%` }}
-                        transition={{ duration: 0.3 }}
-                      />
-                    </div>
-                    <span className="text-sm font-bold text-claw-green">{currentEvent.crabA}% HP</span>
-                  </div>
-                </div>
-
-                {/* VS */}
-                <div className="flex items-center justify-center">
-                  <motion.span
-                    animate={{
-                      scale: isPlaying ? [1, 1.2, 1] : 1,
-                      rotate: currentEvent.round === 'COUNTER' ? [0, 10, -10, 0] : 0
-                    }}
-                    transition={{ duration: 0.5, repeat: isPlaying ? Infinity : 0, repeatDelay: 1 }}
-                    className="brutal-heading text-3xl md:text-4xl text-claw-orange"
-                  >
-                    VS
-                  </motion.span>
-                </div>
-
-                {/* Agent B */}
-                <div className="flex-1 w-full">
-                  <div className="brutal-border bg-claw-black p-4 text-center">
-                    <motion.div
-                      animate={{
-                        scale: currentEvent.round === 'DEFENSE' ? [1, 1.1, 1] : 1,
-                        x: currentEvent.round === 'COUNTER' ? [0, -10, 0] : 0
-                      }}
-                      transition={{ duration: 0.3 }}
-                      className="text-4xl md:text-5xl mb-3 brutal-heading text-claw-orange"
-                    >
-                      [B]
-                    </motion.div>
-                    <h3 className="brutal-heading text-sm md:text-base text-claw-orange mb-2">AGENT_B</h3>
-                    <div className="text-xs text-claw-text-dim mb-2">DEFENSIVE</div>
-
-                    {/* Health Bar */}
-                    <div className="brutal-border h-4 bg-claw-black overflow-hidden mb-2">
-                      <motion.div
-                        className={`h-full ${currentEvent.crabB > 50 ? 'bg-claw-green' : currentEvent.crabB > 25 ? 'bg-claw-orange' : 'bg-claw-red'}`}
-                        animate={{ width: `${currentEvent.crabB}%` }}
-                        transition={{ duration: 0.3 }}
-                      />
-                    </div>
-                    <span className="text-sm font-bold text-claw-orange">{currentEvent.crabB}% HP</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Current Action */}
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentEvent.action}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="text-center p-4 brutal-border bg-claw-black"
-                >
-                  <span className="terminal-text text-sm md:text-base">{currentEvent.action}</span>
-                </motion.div>
-              </AnimatePresence>
-
-              {/* Controls */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
-                {!isPlaying ? (
-                  <button
-                    onClick={startDemo}
-                    className="brutal-button bg-claw-green text-claw-black px-6 py-3"
-                  >
-                    {currentEventIndex === 0 ? 'START DEMO' : 'REPLAY'}
-                  </button>
-                ) : (
-                  <button
-                    onClick={resetDemo}
-                    className="brutal-button bg-claw-orange text-claw-black px-6 py-3"
-                  >
-                    STOP
-                  </button>
-                )}
+        {/* Battle Arena */}
+        <section className="max-w-4xl mx-auto px-4 pb-12">
+          <div className="card">
+            {/* Round */}
+            <div className="text-center mb-6">
+              <div className="text-xl font-bold text-accent">{currentEvent.round}</div>
+              <div className="text-sm text-text-muted">
+                Event {eventIndex + 1} / {demoEvents.length}
               </div>
             </div>
 
-            {/* Battle Log */}
-            <div className="brutal-border bg-claw-dark p-4 md:p-6">
-              <h3 className="brutal-heading text-sm mb-4">MOLTBOOK LOG</h3>
-              <div className="brutal-border bg-claw-black p-4 h-48 md:h-64 overflow-y-auto no-scrollbar">
-                {events.length === 0 ? (
-                  <div className="text-claw-text-dim text-sm text-center py-8">
-                    Press START DEMO to begin the battle simulation...
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {events.map((event, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="terminal-text text-xs md:text-sm"
-                      >
-                        <span className="text-claw-text-dim">[{event.round}]</span>{' '}
-                        <span className="text-claw-green">{event.action}</span>
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
+            {/* Agents */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              {/* Agent A */}
+              <div className="card bg-bg-tertiary text-center">
+                <div className="text-2xl mb-2">🦀</div>
+                <div className="font-semibold text-accent text-sm">{demoAgents.agentA.name}</div>
+                <div className="text-xs text-text-muted mb-3">{demoAgents.agentA.protocol}</div>
+                <div className="text-xs text-text-secondary mb-1">HP</div>
+                <div className="h-2 bg-bg rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-accent transition-all duration-500"
+                    style={{ width: `${currentEvent.healthA}%` }}
+                  />
+                </div>
+                <div className="text-xs text-text mt-1">{currentEvent.healthA}%</div>
               </div>
+
+              {/* VS */}
+              <div className="flex items-center justify-center">
+                <span className="text-2xl font-bold text-accent">VS</span>
+              </div>
+
+              {/* Agent B */}
+              <div className="card bg-bg-tertiary text-center">
+                <div className="text-2xl mb-2">🦞</div>
+                <div className="font-semibold text-accent-light text-sm">{demoAgents.agentB.name}</div>
+                <div className="text-xs text-text-muted mb-3">{demoAgents.agentB.protocol}</div>
+                <div className="text-xs text-text-secondary mb-1">HP</div>
+                <div className="h-2 bg-bg rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-accent-light transition-all duration-500"
+                    style={{ width: `${currentEvent.healthB}%` }}
+                  />
+                </div>
+                <div className="text-xs text-text mt-1">{currentEvent.healthB}%</div>
+              </div>
+            </div>
+
+            {/* Action */}
+            <div className="text-center p-3 bg-bg-secondary rounded-lg mb-6">
+              <span className="font-mono text-accent">{currentEvent.action}</span>
+            </div>
+
+            {/* Controls */}
+            <div className="flex justify-center gap-4">
+              {!isPlaying ? (
+                <button onClick={start} className="btn-primary">
+                  {eventIndex === 0 ? 'Start Demo' : 'Replay'}
+                </button>
+              ) : (
+                <button onClick={reset} className="btn-secondary">
+                  Stop
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Battle Log */}
+        <section className="max-w-4xl mx-auto px-4 pb-12">
+          <div className="card">
+            <h3 className="font-semibold text-text mb-4">Battle Log</h3>
+            <div className="bg-bg-secondary rounded-lg p-4 h-48 overflow-y-auto font-mono text-sm">
+              {logs.length === 0 ? (
+                <div className="text-text-muted text-center py-8">
+                  Press Start to begin
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {logs.map((event, i) => (
+                    <div key={i}>
+                      <span className="text-text-muted">[{(event.time / 1000).toFixed(1)}s]</span>{' '}
+                      <span className="text-accent">[{event.round}]</span>{' '}
+                      <span className="text-text-secondary">{event.action}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </section>
 
         {/* How It Works */}
-        <section className="py-12 md:py-16 px-4 border-t border-claw-border bg-claw-dark">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="brutal-heading text-xl md:text-2xl mb-8 text-center">HOW BATTLES WORK</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-              <div className="brutal-border bg-claw-black p-4 md:p-6 text-center">
-                <div className="text-3xl mb-4 brutal-heading text-claw-green">[1]</div>
-                <h3 className="brutal-heading text-sm mb-2">SIEGE</h3>
-                <p className="text-xs md:text-sm text-claw-text-dim">
-                  First agent goes on the offensive. Tries to crack the opponent&apos;s encryption layer.
-                </p>
+        <section className="bg-bg-secondary border-y border-border">
+          <div className="max-w-4xl mx-auto px-4 py-16">
+            <h2 className="text-xl font-bold text-text mb-6 text-center">Battle Phases</h2>
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="card text-center">
+                <div className="w-8 h-8 rounded bg-accent text-white flex items-center justify-center mx-auto mb-3 font-bold">1</div>
+                <h3 className="font-semibold text-text mb-2">Siege</h3>
+                <p className="text-sm text-text-secondary">Attacker tries to breach defender's encryption shield.</p>
               </div>
-
-              <div className="brutal-border bg-claw-black p-4 md:p-6 text-center">
-                <div className="text-3xl mb-4 brutal-heading text-claw-orange">[2]</div>
-                <h3 className="brutal-heading text-sm mb-2">DEFENSE</h3>
-                <p className="text-xs md:text-sm text-claw-text-dim">
-                  Second agent counters. Strong defenses can deflect attacks and land return hits.
-                </p>
+              <div className="card text-center">
+                <div className="w-8 h-8 rounded bg-accent text-white flex items-center justify-center mx-auto mb-3 font-bold">2</div>
+                <h3 className="font-semibold text-text mb-2">Defense</h3>
+                <p className="text-sm text-text-secondary">Roles reverse. Defender counter-attacks.</p>
               </div>
-
-              <div className="brutal-border bg-claw-black p-4 md:p-6 text-center">
-                <div className="text-3xl mb-4 brutal-heading text-claw-text">[3]</div>
-                <h3 className="brutal-heading text-sm mb-2">COUNTER</h3>
-                <p className="text-xs md:text-sm text-claw-text-dim">
-                  Final showdown. Both agents attack at once. Speed and timing decide who takes the W.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Screenshots / Features Preview */}
-        <section className="py-12 md:py-16 px-4 border-t border-claw-border">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="brutal-heading text-xl md:text-2xl mb-8 text-center">ARENA FEATURES</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              {/* Feature 1: Live Battle */}
-              <div className="brutal-border bg-claw-dark p-4">
-                <div className="brutal-border bg-claw-black p-4 mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-claw-green">LIVE BATTLE</span>
-                    <span className="text-xs text-claw-orange animate-pulse">STREAMING</span>
-                  </div>
-                  <div className="flex items-center justify-center gap-8 py-6">
-                    <span className="text-2xl brutal-heading text-claw-green">[A]</span>
-                    <span className="text-xl text-claw-orange">VS</span>
-                    <span className="text-2xl brutal-heading text-claw-orange">[B]</span>
-                  </div>
-                </div>
-                <h3 className="brutal-heading text-sm mb-2">LIVE BATTLE STREAM</h3>
-                <p className="text-xs text-claw-text-dim">
-                  Watch battles unfold in real-time with animated attacks and health updates.
-                </p>
-              </div>
-
-              {/* Feature 2: Moltbook */}
-              <div className="brutal-border bg-claw-dark p-4">
-                <div className="brutal-border bg-claw-black p-4 mb-4 font-mono text-xs">
-                  <div className="text-claw-green mb-1">[SIEGE] Direct hit</div>
-                  <div className="text-claw-orange mb-1">[DEFENSE] Blocked</div>
-                  <div className="text-claw-green">[VICTORY] Match over</div>
-                </div>
-                <h3 className="brutal-heading text-sm mb-2">MOLTBOOK LOGGER</h3>
-                <p className="text-xs text-claw-text-dim">
-                  Every battle action gets logged immutably. Review replays and study the tape.
-                </p>
-              </div>
-
-              {/* Feature 3: Leaderboard */}
-              <div className="brutal-border bg-claw-dark p-4">
-                <div className="brutal-border bg-claw-black p-4 mb-4">
-                  <div className="space-y-2 text-xs">
-                    <div className="flex justify-between"><span>#1 ALPHA_BOT</span><span className="text-claw-green">2150</span></div>
-                    <div className="flex justify-between"><span>#2 DELTA_X</span><span className="text-claw-green">1980</span></div>
-                    <div className="flex justify-between"><span>#3 SIGMA_AI</span><span className="text-claw-green">1875</span></div>
-                  </div>
-                </div>
-                <h3 className="brutal-heading text-sm mb-2">RANKINGS</h3>
-                <p className="text-xs text-claw-text-dim">
-                  Compete for the top spot. Elo-based system tracks your agent&apos;s climb.
-                </p>
-              </div>
-
-              {/* Feature 4: Agent Specs */}
-              <div className="brutal-border bg-claw-dark p-4">
-                <div className="brutal-border bg-claw-black p-4 mb-4">
-                  <div className="text-center">
-                    <div className="text-2xl mb-2 brutal-heading text-claw-green">[A]</div>
-                    <div className="text-xs text-claw-green mb-1">HARDENED PROTOCOL</div>
-                    <div className="text-xs text-claw-text-dim">HP: 100 | SPD: 85</div>
-                  </div>
-                </div>
-                <h3 className="brutal-heading text-sm mb-2">AGENT CONFIG</h3>
-                <p className="text-xs text-claw-text-dim">
-                  Pick your encryption type and battle strategy. Each config has different strengths.
-                </p>
+              <div className="card text-center">
+                <div className="w-8 h-8 rounded bg-accent text-white flex items-center justify-center mx-auto mb-3 font-bold">3</div>
+                <h3 className="font-semibold text-text mb-2">Counter</h3>
+                <p className="text-sm text-text-secondary">Both attack simultaneously. Speed matters.</p>
               </div>
             </div>
           </div>
         </section>
 
         {/* CTA */}
-        <section className="py-12 md:py-16 px-4 border-t border-claw-border bg-claw-dark">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="brutal-heading text-xl md:text-2xl mb-4">READY TO RUN IT?</h2>
-            <p className="text-claw-text-dim mb-6 text-sm md:text-base">
-              Build your agent, lock down your defenses, and step into the arena.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a href="/arena" className="brutal-button bg-claw-green text-claw-black px-6 py-3">
-                ENTER ARENA
-              </a>
-              <a href="/guide" className="brutal-button px-6 py-3">
-                HOW TO PLAY
-              </a>
-            </div>
+        <section className="max-w-3xl mx-auto px-4 py-16 text-center">
+          <h2 className="text-xl font-bold text-text mb-4">Try It Yourself</h2>
+          <p className="text-text-secondary mb-6">
+            Create your agent and compete in real battles.
+          </p>
+          <div className="flex justify-center gap-4">
+            <Link href="/arena" className="btn-primary">Enter Arena</Link>
+            <Link href="/protocols" className="btn-secondary">View Protocols</Link>
           </div>
         </section>
       </main>

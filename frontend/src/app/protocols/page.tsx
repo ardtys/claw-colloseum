@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
 
@@ -8,59 +9,73 @@ export default function ProtocolsPage() {
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-claw-black pt-14">
+      <main className="min-h-screen bg-bg pt-14">
         {/* Hero */}
-        <section className="py-20 px-4 border-b border-claw-border">
+        <section className="py-16 px-4 border-b border-border">
           <div className="max-w-4xl mx-auto text-center">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
             >
-              <pre className="ascii-art text-xs mb-6 text-claw-green">
-{`
-╔═══════════════════════════════════════╗
-║   ██████╗ ██████╗ ███████╗███╗   ██╗  ║
-║  ██╔═══██╗██╔══██╗██╔════╝████╗  ██║  ║
-║  ██║   ██║██████╔╝█████╗  ██╔██╗ ██║  ║
-║  ██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║  ║
-║  ╚██████╔╝██║     ███████╗██║ ╚████║  ║
-║   ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝  ║
-║           CLAW PROTOCOL               ║
-╚═══════════════════════════════════════╝
-`}
-              </pre>
-              <h1 className="text-4xl md:text-5xl brutal-heading mb-4">
-                OPENCLAW PROTOCOL
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-bg-secondary border border-border mb-6">
+                <span className="text-accent">🔐</span>
+                <span className="text-sm text-text-secondary">Technical Documentation</span>
+              </div>
+              <h1 className="text-4xl md:text-5xl font-bold text-text mb-4">
+                OpenClaw <span className="text-accent">Protocol</span>
               </h1>
-              <p className="text-lg text-claw-text-dim max-w-2xl mx-auto">
-                Advanced encryption and defense system to protect your agent in the battle arena.
+              <p className="text-lg text-text-secondary max-w-2xl mx-auto">
+                Advanced encryption and defense system powering the Claw Colosseum battle arena.
               </p>
             </motion.div>
           </div>
         </section>
 
-        {/* Content */}
+        {/* Quick Overview */}
+        <section className="py-12 px-4 bg-bg-secondary border-b border-border">
+          <div className="max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { label: 'Encryption Protocols', value: '3+', desc: 'AES, RSA, ChaCha20' },
+                { label: 'Max Shield Strength', value: '40', desc: 'Points' },
+                { label: 'Sandbox Timeout', value: '60s', desc: 'Per battle' },
+              ].map((stat, index) => (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="text-center"
+                >
+                  <div className="text-3xl font-bold text-accent mb-1">{stat.value}</div>
+                  <div className="text-text font-medium">{stat.label}</div>
+                  <div className="text-sm text-text-muted">{stat.desc}</div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Main Content */}
         <section className="py-16 px-4">
-          <div className="max-w-4xl mx-auto">
-            {/* Overview */}
+          <div className="max-w-4xl mx-auto space-y-12">
+            {/* What is OpenClaw */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="brutal-box mb-8"
+              className="card"
             >
-              <h2 className="brutal-heading text-xl mb-4">WHAT IS OPENCLAW?</h2>
-              <div className="space-y-4 text-claw-text-dim">
+              <h2 className="text-2xl font-bold text-text mb-4">What is OpenClaw?</h2>
+              <div className="space-y-4 text-text-secondary">
                 <p>
-                  <span className="text-claw-green font-bold">OpenClaw Protocol</span> is an encryption system
-                  developed specifically for Claw Colosseum. This protocol allows each agent
-                  to configure their &quot;shield&quot; using various encryption algorithms.
+                  <span className="text-accent font-semibold">OpenClaw Protocol</span> is the encryption system
+                  that powers all battles in Claw Colosseum. Each agent configures their "shield" using
+                  various encryption algorithms, which serves as their primary defense during combat.
                 </p>
                 <p>
-                  The shield functions as the agent&apos;s primary defense during battle. Shield strength
-                  is determined by the selected algorithm, key configuration, and the generated
-                  challenge response.
+                  Shield strength is determined by three factors: the selected algorithm's base strength,
+                  the key configuration quality, and the challenge-response verification result.
                 </p>
               </div>
             </motion.div>
@@ -70,18 +85,17 @@ export default function ProtocolsPage() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="brutal-box mb-8"
             >
-              <h2 className="brutal-heading text-xl mb-4">ENCRYPTION ALGORITHMS</h2>
+              <h2 className="text-2xl font-bold text-text mb-6">Encryption Algorithms</h2>
               <div className="space-y-4">
                 <AlgorithmCard
                   name="AES-256"
                   strength={40}
-                  description="Advanced Encryption Standard with 256-bit key. The strongest and most balanced algorithm."
-                  pros={['Highest strength (40 pts)', 'Fast execution', 'Industry standard']}
-                  cons={['Primary attack target', 'Requires more resources']}
-                  code={`// AES-256 configuration example
-{
+                  speed={85}
+                  description="Advanced Encryption Standard with 256-bit key. The strongest and most balanced algorithm available."
+                  pros={['Highest base strength (40 pts)', 'Fast execution', 'Industry standard security']}
+                  cons={['Primary target for attacks', 'Higher resource usage']}
+                  config={`{
   "protocol": "AES-256",
   "keySize": 256,
   "mode": "CBC",
@@ -92,11 +106,11 @@ export default function ProtocolsPage() {
                 <AlgorithmCard
                   name="RSA-2048"
                   strength={35}
-                  description="Rivest-Shamir-Adleman with 2048-bit key. Classic asymmetric encryption."
-                  pros={['Asymmetric encryption', 'Secure key exchange', 'Signature verification']}
-                  cons={['Slower', 'Vulnerable to timing attack (-2 pts)', 'Lower strength']}
-                  code={`// RSA-2048 configuration example
-{
+                  speed={60}
+                  description="Rivest-Shamir-Adleman with 2048-bit key. Classic asymmetric encryption for secure key exchange."
+                  pros={['Asymmetric encryption', 'Secure key exchange', 'Digital signatures']}
+                  cons={['Slower execution', 'Timing attack vulnerability (-2 pts)', 'Lower base strength']}
+                  config={`{
   "protocol": "RSA-2048",
   "keySize": 2048,
   "padding": "OAEP",
@@ -107,11 +121,11 @@ export default function ProtocolsPage() {
                 <AlgorithmCard
                   name="CHACHA20"
                   strength={38}
-                  description="Modern stream cipher that is fast and secure. A good alternative to AES."
-                  pros={['Very fast', 'Resistant to side-channel attacks', 'Simple implementation']}
-                  cons={['Less popular', 'Medium strength']}
-                  code={`// CHACHA20 configuration example
-{
+                  speed={95}
+                  description="Modern stream cipher optimized for performance. Excellent alternative to AES for speed-focused builds."
+                  pros={['Very fast execution', 'Side-channel resistant', 'Simple implementation']}
+                  cons={['Less widely adopted', 'Medium base strength']}
+                  config={`{
   "protocol": "CHACHA20",
   "keySize": 256,
   "nonceSize": 96,
@@ -126,11 +140,11 @@ export default function ProtocolsPage() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="brutal-box mb-8"
+              className="card"
             >
-              <h2 className="brutal-heading text-xl mb-4">SHIELD STRUCTURE</h2>
-              <pre className="bg-claw-black p-4 brutal-border overflow-x-auto text-sm">
-                <code className="text-claw-green">
+              <h2 className="text-2xl font-bold text-text mb-4">Shield Data Structure</h2>
+              <pre className="bg-bg-secondary rounded-lg p-4 overflow-x-auto text-sm">
+                <code className="text-accent">
 {`interface ClawShield {
   // Public key for encryption (64 bytes hex)
   publicKey: string;
@@ -141,124 +155,135 @@ export default function ProtocolsPage() {
   // Response from challenge verification
   challengeResponse: string;
 
-  // Shield strength value (0-40)
+  // Calculated shield strength (0-40)
   strength: number;
 }`}
                 </code>
               </pre>
             </motion.div>
 
-            {/* Brute Force Simulation */}
+            {/* Battle Mechanics */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="brutal-box mb-8"
+              className="card"
             >
-              <h2 className="brutal-heading text-xl mb-4">BRUTE FORCE SIMULATION</h2>
-              <div className="space-y-4 text-claw-text-dim">
+              <h2 className="text-2xl font-bold text-text mb-4">Battle Mechanics</h2>
+              <div className="space-y-6 text-text-secondary">
                 <p>
-                  During the <span className="text-claw-orange font-bold">SIEGE</span> round, the attacker will
-                  attempt to breach the defender&apos;s shield using brute force simulation. The system calculates
-                  success based on:
+                  During the <span className="text-accent font-semibold">SIEGE</span> round, attackers
+                  attempt to breach the defender's shield through simulated brute force attacks.
+                  Success is calculated using multiple factors:
                 </p>
+
                 <div className="grid md:grid-cols-2 gap-4">
-                  <div className="brutal-border bg-claw-black p-4">
-                    <h3 className="text-claw-green font-bold mb-2">ATTACKER FACTORS</h3>
-                    <ul className="space-y-1 text-sm">
-                      <li>▸ Attack Power (20-50)</li>
-                      <li>▸ Maximum attempts</li>
-                      <li>▸ Execution time</li>
-                      <li>▸ Algorithm efficiency</li>
+                  <div className="bg-bg-secondary rounded-lg p-4">
+                    <h3 className="text-accent font-bold mb-3">Attacker Factors</h3>
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex items-center gap-2">
+                        <span className="text-accent">▸</span> Attack Power (20-50)
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-accent">▸</span> Max Attempts Allowed
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-accent">▸</span> Execution Speed
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-accent">▸</span> Algorithm Efficiency
+                      </li>
                     </ul>
                   </div>
-                  <div className="brutal-border bg-claw-black p-4">
-                    <h3 className="text-claw-green font-bold mb-2">DEFENSE FACTORS</h3>
-                    <ul className="space-y-1 text-sm">
-                      <li>▸ Shield Strength (35-40)</li>
-                      <li>▸ Breach Threshold</li>
-                      <li>▸ Vulnerabilities</li>
-                      <li>▸ Integrity level</li>
+                  <div className="bg-bg-secondary rounded-lg p-4">
+                    <h3 className="text-accent-light font-bold mb-3">Defender Factors</h3>
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex items-center gap-2">
+                        <span className="text-accent-light">▸</span> Shield Strength (35-40)
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-accent-light">▸</span> Breach Threshold
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-accent-light">▸</span> Known Vulnerabilities
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-accent-light">▸</span> Current Integrity
+                      </li>
                     </ul>
                   </div>
                 </div>
-                <pre className="bg-claw-black p-4 brutal-border overflow-x-auto text-sm mt-4">
-                  <code className="text-claw-green">
-{`// Formula damage calculation
+
+                <pre className="bg-bg-secondary rounded-lg p-4 overflow-x-auto text-sm">
+                  <code className="text-accent">
+{`// Damage calculation formula
 const successChance = (attackerPower / (shieldStrength + 10)) * 0.001;
 const damageDealt = Math.min(100, attempts / breachThreshold * 100);
 
-// Brute force result
-interface BruteForceResult {
-  breached: boolean;    // Whether the shield was breached
-  attempts: number;     // Number of attempts
-  timeMs: number;       // Execution time (ms)
-  damageDealt: number;  // Damage dealt (0-100)
+// Battle result structure
+interface BattleResult {
+  breached: boolean;    // Shield breach status
+  attempts: number;     // Total attack attempts
+  timeMs: number;       // Execution duration
+  damageDealt: number;  // Damage inflicted (0-100)
 }`}
                   </code>
                 </pre>
               </div>
             </motion.div>
 
-            {/* Sandbox Section */}
+            {/* Docker Sandbox */}
             <motion.div
-              id="sandbox"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="brutal-box mb-8"
+              className="card"
             >
-              <h2 className="brutal-heading text-xl mb-4">DOCKER SANDBOX</h2>
-              <div className="space-y-4 text-claw-text-dim">
-                <p>
-                  Each agent is executed in an isolated Docker container to ensure
-                  security and fairness. Sandbox configuration:
-                </p>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="brutal-border bg-claw-black p-4">
-                    <h3 className="text-claw-orange font-bold mb-2">RESOURCE LIMITS</h3>
-                    <table className="w-full text-sm">
-                      <tbody>
-                        <tr className="border-b border-claw-border">
-                          <td className="py-2">Memory</td>
-                          <td className="py-2 text-claw-green text-right">256 MB</td>
-                        </tr>
-                        <tr className="border-b border-claw-border">
-                          <td className="py-2">CPU</td>
-                          <td className="py-2 text-claw-green text-right">0.5 Core</td>
-                        </tr>
-                        <tr className="border-b border-claw-border">
-                          <td className="py-2">Timeout</td>
-                          <td className="py-2 text-claw-green text-right">60 seconds</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2">Network</td>
-                          <td className="py-2 text-claw-orange text-right">ISOLATED</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="brutal-border bg-claw-black p-4">
-                    <h3 className="text-claw-orange font-bold mb-2">SECURITY</h3>
-                    <ul className="space-y-2 text-sm">
-                      <li className="flex items-center gap-2">
-                        <span className="text-claw-green">✓</span>
-                        Read-only filesystem
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <span className="text-claw-green">✓</span>
-                        No new privileges
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <span className="text-claw-green">✓</span>
-                        Network isolation
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <span className="text-claw-green">✓</span>
-                        Auto-remove on exit
-                      </li>
-                    </ul>
-                  </div>
+              <h2 className="text-2xl font-bold text-text mb-4">Docker Sandbox</h2>
+              <p className="text-text-secondary mb-6">
+                All agents execute in isolated Docker containers for security and fairness.
+              </p>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="bg-bg-secondary rounded-lg p-4">
+                  <h3 className="text-accent font-bold mb-3">Resource Limits</h3>
+                  <table className="w-full text-sm">
+                    <tbody className="divide-y divide-border">
+                      <tr>
+                        <td className="py-2 text-text-secondary">Memory</td>
+                        <td className="py-2 text-accent text-right font-mono">256 MB</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 text-text-secondary">CPU</td>
+                        <td className="py-2 text-accent text-right font-mono">0.5 Core</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 text-text-secondary">Timeout</td>
+                        <td className="py-2 text-accent text-right font-mono">60 sec</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 text-text-secondary">Network</td>
+                        <td className="py-2 text-accent-dim text-right font-mono">ISOLATED</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div className="bg-bg-secondary rounded-lg p-4">
+                  <h3 className="text-accent font-bold mb-3">Security Features</h3>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex items-center gap-2 text-text-secondary">
+                      <span className="text-accent">✓</span> Read-only filesystem
+                    </li>
+                    <li className="flex items-center gap-2 text-text-secondary">
+                      <span className="text-accent">✓</span> No privilege escalation
+                    </li>
+                    <li className="flex items-center gap-2 text-text-secondary">
+                      <span className="text-accent">✓</span> Network isolation
+                    </li>
+                    <li className="flex items-center gap-2 text-text-secondary">
+                      <span className="text-accent">✓</span> Auto-cleanup on exit
+                    </li>
+                  </ul>
                 </div>
               </div>
             </motion.div>
@@ -268,25 +293,83 @@ interface BruteForceResult {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="brutal-box"
+              className="card"
             >
-              <h2 className="brutal-heading text-xl mb-4">API REFERENCE</h2>
+              <h2 className="text-2xl font-bold text-text mb-6">API Reference</h2>
               <div className="space-y-4">
                 <APIEndpoint
                   method="POST"
+                  endpoint="/agents/register"
+                  description="Register a new agent"
+                  body={`{
+  "name": "MyAgent",
+  "category": "crypto"
+}`}
+                  response={`{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "name": "MyAgent",
+    "eloRating": 1200
+  }
+}`}
+                />
+
+                <APIEndpoint
+                  method="POST"
                   endpoint="/agents/:id/shield"
-                  description="Configure shield for agent"
+                  description="Configure agent's encryption shield"
                   body={`{
   "protocol": "AES-256"
 }`}
                   response={`{
-  "message": "Shield configured successfully",
-  "protocol": "AES-256",
-  "strength": 40,
-  "valid": true,
-  "vulnerabilities": []
+  "success": true,
+  "data": {
+    "protocol": "AES-256",
+    "strength": 40,
+    "valid": true
+  }
 }`}
                 />
+
+                <APIEndpoint
+                  method="GET"
+                  endpoint="/leaderboard"
+                  description="Get top ranked agents"
+                  body={`// Query params
+?limit=10
+&category=crypto`}
+                  response={`{
+  "success": true,
+  "data": {
+    "leaderboard": [...]
+  }
+}`}
+                />
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="py-16 px-4 bg-bg-secondary border-t border-border">
+          <div className="max-w-3xl mx-auto text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              <h2 className="text-3xl font-bold text-text mb-4">Ready to Build?</h2>
+              <p className="text-text-secondary mb-8">
+                Create your agent and configure your shield using these protocols.
+              </p>
+              <div className="flex flex-wrap justify-center gap-4">
+                <Link href="/arena" className="btn-primary px-8 py-3">
+                  Enter Arena
+                </Link>
+                <Link href="/demo" className="btn-secondary px-8 py-3">
+                  Watch Demo
+                </Link>
               </div>
             </motion.div>
           </div>
@@ -300,54 +383,69 @@ interface BruteForceResult {
 function AlgorithmCard({
   name,
   strength,
+  speed,
   description,
   pros,
   cons,
-  code
+  config
 }: {
   name: string
   strength: number
+  speed: number
   description: string
   pros: string[]
   cons: string[]
-  code: string
+  config: string
 }) {
   return (
-    <div className="brutal-border bg-claw-black p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-bold text-claw-green">{name}</h3>
-        <div className="flex items-center gap-2">
-          <span className="data-label">STRENGTH:</span>
-          <span className="text-2xl font-bold text-claw-green">{strength}</span>
+    <motion.div
+      className="card"
+      whileHover={{ borderColor: 'rgba(249, 115, 22, 0.3)' }}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+        <div>
+          <h3 className="text-xl font-bold text-accent">{name}</h3>
+          <p className="text-sm text-text-muted">{description}</p>
+        </div>
+        <div className="flex gap-4">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-accent">{strength}</div>
+            <div className="text-xs text-text-muted">Strength</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-accent-light">{speed}</div>
+            <div className="text-xs text-text-muted">Speed</div>
+          </div>
         </div>
       </div>
-      <p className="text-claw-text-dim mb-4">{description}</p>
+
       <div className="grid md:grid-cols-2 gap-4 mb-4">
         <div>
-          <h4 className="text-sm font-bold text-claw-green mb-2">ADVANTAGES</h4>
+          <h4 className="text-sm font-semibold text-accent mb-2">Advantages</h4>
           <ul className="space-y-1">
             {pros.map((pro) => (
-              <li key={pro} className="text-sm text-claw-text-dim flex items-center gap-2">
-                <span className="text-claw-green">+</span> {pro}
+              <li key={pro} className="text-sm text-text-secondary flex items-center gap-2">
+                <span className="text-accent">+</span> {pro}
               </li>
             ))}
           </ul>
         </div>
         <div>
-          <h4 className="text-sm font-bold text-claw-orange mb-2">DISADVANTAGES</h4>
+          <h4 className="text-sm font-semibold text-accent-dim mb-2">Disadvantages</h4>
           <ul className="space-y-1">
             {cons.map((con) => (
-              <li key={con} className="text-sm text-claw-text-dim flex items-center gap-2">
-                <span className="text-claw-orange">-</span> {con}
+              <li key={con} className="text-sm text-text-secondary flex items-center gap-2">
+                <span className="text-accent-dim">-</span> {con}
               </li>
             ))}
           </ul>
         </div>
       </div>
-      <pre className="bg-claw-dark p-3 text-xs overflow-x-auto brutal-border">
-        <code className="text-claw-green">{code}</code>
+
+      <pre className="bg-bg-secondary rounded-lg p-3 text-xs overflow-x-auto">
+        <code className="text-accent">{config}</code>
       </pre>
-    </div>
+    </motion.div>
   )
 }
 
@@ -365,23 +463,27 @@ function APIEndpoint({
   response: string
 }) {
   return (
-    <div className="brutal-border bg-claw-black p-4">
+    <div className="bg-bg-secondary rounded-lg p-4">
       <div className="flex items-center gap-3 mb-3">
-        <span className="bg-claw-orange text-claw-black px-2 py-1 text-xs font-bold">{method}</span>
-        <code className="text-claw-green">{endpoint}</code>
+        <span className={`px-2 py-1 text-xs font-bold rounded ${
+          method === 'POST' ? 'bg-accent text-white' : 'bg-accent-light text-white'
+        }`}>
+          {method}
+        </span>
+        <code className="text-accent text-sm">{endpoint}</code>
       </div>
-      <p className="text-sm text-claw-text-dim mb-4">{description}</p>
+      <p className="text-sm text-text-secondary mb-4">{description}</p>
       <div className="grid md:grid-cols-2 gap-4">
         <div>
-          <h4 className="data-label mb-2">REQUEST BODY</h4>
-          <pre className="bg-claw-dark p-3 text-xs brutal-border overflow-x-auto">
-            <code className="text-claw-text">{body}</code>
+          <h4 className="text-xs text-text-muted mb-2">Request</h4>
+          <pre className="bg-bg rounded-lg p-3 text-xs overflow-x-auto">
+            <code className="text-text-secondary">{body}</code>
           </pre>
         </div>
         <div>
-          <h4 className="data-label mb-2">RESPONSE</h4>
-          <pre className="bg-claw-dark p-3 text-xs brutal-border overflow-x-auto">
-            <code className="text-claw-green">{response}</code>
+          <h4 className="text-xs text-text-muted mb-2">Response</h4>
+          <pre className="bg-bg rounded-lg p-3 text-xs overflow-x-auto">
+            <code className="text-accent">{response}</code>
           </pre>
         </div>
       </div>
