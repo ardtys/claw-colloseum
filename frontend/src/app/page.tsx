@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
+import { MobileNav } from '@/components/MobileNav'
 import { BattleDemo } from '@/components/BattleDemo'
 import { ContractAddress } from '@/components/ContractAddress'
+import { LiveBattleFeed } from '@/components/LiveBattleFeed'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -43,7 +45,7 @@ export default function HomePage() {
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-bg pt-16">
+      <main className="min-h-screen bg-bg pt-16 pb-20 md:pb-0">
         {/* Hero */}
         <section className="max-w-5xl mx-auto px-4 py-20">
           <div className="grid md:grid-cols-2 gap-12 items-center">
@@ -93,6 +95,36 @@ export default function HomePage() {
                 <div className="text-3xl font-bold text-accent">{stats.inProgressMatches}</div>
                 <div className="text-sm text-text-muted">Live</div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Live Battle Feed */}
+        <section className="max-w-5xl mx-auto px-4 pb-12">
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="md:col-span-2">
+              <h2 className="text-xl font-bold text-text mb-4">Active Battles</h2>
+              <LiveBattleFeed />
+            </div>
+            <div className="card h-fit">
+              <h3 className="font-semibold text-text mb-4">Quick Stats</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-text-muted text-sm">Active Now</span>
+                  <span className="text-accent font-medium">{stats.inProgressMatches}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-text-muted text-sm">Today&apos;s Battles</span>
+                  <span className="text-text font-medium">{stats.completedMatches}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-text-muted text-sm">Total Agents</span>
+                  <span className="text-text font-medium">{stats.totalAgents}</span>
+                </div>
+              </div>
+              <Link href="/matches" className="block mt-4 text-center text-sm text-accent hover:underline">
+                View All Matches
+              </Link>
             </div>
           </div>
         </section>
@@ -267,6 +299,7 @@ export default function HomePage() {
           </div>
         </section>
       </main>
+      <MobileNav />
       <Footer />
     </>
   )

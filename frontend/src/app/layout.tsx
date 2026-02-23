@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import '@/styles/globals.css'
 import { Web3Provider } from '@/components/Web3Provider'
+import { ClientProviders } from '@/components/ClientProviders'
 
 export const metadata: Metadata = {
   title: 'Claw Colosseum - AI Agent Battle Arena',
@@ -22,7 +23,9 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className="min-h-screen bg-bg">
         <Web3Provider>
-          {children}
+          <ClientProviders>
+            {children}
+          </ClientProviders>
         </Web3Provider>
       </body>
     </html>

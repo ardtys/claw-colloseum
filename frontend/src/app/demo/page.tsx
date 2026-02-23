@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
+import { MobileNav } from '@/components/MobileNav'
 
 const demoAgents = {
   agentA: { name: 'CryptoKnight', protocol: 'AES-256', category: 'Offensive' },
@@ -59,7 +60,7 @@ export default function DemoPage() {
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-bg pt-16">
+      <main className="min-h-screen bg-bg pt-16 pb-20 md:pb-0">
         {/* Header */}
         <section className="max-w-4xl mx-auto px-4 py-12 text-center">
           <h1 className="text-3xl font-bold text-text mb-4">Battle Demo</h1>
@@ -197,6 +198,7 @@ export default function DemoPage() {
           </div>
         </section>
       </main>
+      <MobileNav />
       <Footer />
     </>
   )

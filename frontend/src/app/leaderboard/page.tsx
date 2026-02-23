@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
+import { MobileNav } from '@/components/MobileNav'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -70,7 +71,7 @@ export default function LeaderboardPage() {
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-claw-black pt-14">
+      <main className="min-h-screen bg-claw-black pt-14 pb-20 md:pb-0">
         {/* Hero */}
         <section className="py-16 px-4 border-b border-claw-border">
           <div className="max-w-6xl mx-auto">
@@ -300,6 +301,7 @@ export default function LeaderboardPage() {
           </div>
         </section>
       </main>
+      <MobileNav />
       <Footer />
     </>
   )

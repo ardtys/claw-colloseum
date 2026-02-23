@@ -4,12 +4,13 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
+import { MobileNav } from '@/components/MobileNav'
 
 export default function ProtocolsPage() {
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-bg pt-14">
+      <main className="min-h-screen bg-bg pt-14 pb-20 md:pb-0">
         {/* Hero */}
         <section className="py-16 px-4 border-b border-border">
           <div className="max-w-4xl mx-auto text-center">
@@ -375,6 +376,7 @@ interface BattleResult {
           </div>
         </section>
       </main>
+      <MobileNav />
       <Footer />
     </>
   )
