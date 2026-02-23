@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
 import { BattleDemo } from '@/components/BattleDemo'
+import { ContractAddress } from '@/components/ContractAddress'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -68,6 +69,9 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* Contract Address */}
+        <ContractAddress />
 
         {/* Stats */}
         <section className="border-y border-border bg-bg-secondary">
